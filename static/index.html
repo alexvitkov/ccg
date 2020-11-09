@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>CCG</title>
+		<link rel="stylesheet" type="text/css" href="/style.css">
+	</head>
+
+	<body>
+		<h1>sa6occg</h1>
+
+		<div id="notloggedin" style="display:none;">
+			<form action="/register" method="post">
+				<h2>Register</h2>
+				Username:
+				<input name="username" type="text"><br>
+				Password:
+				<input name="password" type="password"><br>
+				<input type="submit" value="Register">
+			</form>
+
+			<form action="/login" method="post">
+				<h2>Login</h2>
+				Username:
+				<input name="username" type="text"><br>
+				Password:
+				<input name="password" type="password"><br>
+				<input type="submit" value="Log in">
+			</form>
+		</div>
+
+		<div id="loggedin" style="display:none;">
+			Welcome, <span class="username">USERNAME</span>!<br>
+			<button onclick="logOut()">Log out</button>
+		</div>
+
+		<script src="main.js"></script>
+	</body>
+</html>
