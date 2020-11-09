@@ -4,30 +4,31 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 
-// Connection URI
-const uri =
-  "mongodb://127.0.0.1:27017/?poolSize=20&w=majority";
 
-// Create a new MongoClient
-const client = new MongoClient(uri);
+const mongoDbUri = process.env.MONGOURI || "mongodb://127.0.0.1:27017/?poolSize=20&w=majority";
+const PORT       = process.env.PORT     ||  8000;
 
-const app = express();
-const PORT = 8000;
-
+const mongoClient = new MongoClient(mongoDbUri, { useUnifiedTopology: true });
 var db;
 var users;
 var sessions;
 
-async function run() {
-  await client.connect();
-  db = client.db("admin");
+const expressApp = express();
+
+async function runMongo() {
+  await mongoClient.connect();
+  db = mongoClient.db("admin");
   users = db.collection("users");
   sessions = db.collection("sessions");
   await db.command({ ping: 1 });
-  console.log("Connected successfully to mongodb server");
+  console.log("Connected to MongoDB server");
 }
-run();
 
+function runExpress() {
+  expressApp.listen(PORT, () => {
+    console.log(`Express.js server started at port ${PORT}`)
+  });
+}
 
 async function findUser(username, password) {
   var query = {username:username};
@@ -70,15 +71,12 @@ async function genSessionCookie(username, password) {
 }
 
 
-app.use(express.static('static'));
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
+expressApp.use(express.static('static'));
+expressApp.use(bodyParser.urlencoded({ extended: true }));
+expressApp.use(cookieParser());
 
-app.listen(PORT, () => {
-  console.log(`express listening at http://localhost:${PORT}`)
-});
 
-app.post('/register', async (req, res) => {
+expressApp.post('/register', async (req, res) => {
   if (typeof req.body.username != 'string' || typeof req.body.password != 'string') {
     res.setHeader('Content-Type', 'text/plain');
     res.status('400');
@@ -104,7 +102,7 @@ app.post('/register', async (req, res) => {
   res.end();
 });
 
-app.post('/login', async (req, res) => {
+expressApp.post('/login', async (req, res) => {
   if (typeof req.body.username != 'string' || typeof req.body.password != 'string') {
     res.setHeader('Content-Type', 'text/plain');
     res.status('400');
@@ -133,7 +131,7 @@ app.post('/login', async (req, res) => {
 
 });
 
-app.get('/whoami', async (req, res) => {
+expressApp.get('/whoami', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
 
   const session = req.cookies.session;
@@ -157,3 +155,6 @@ app.get('/whoami', async (req, res) => {
     }
   }
 });
+
+runMongo();
+runExpress();
