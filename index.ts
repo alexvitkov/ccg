@@ -19,7 +19,7 @@ class Session {
   username: string;
   lobby: Lobby;
 
-  constructor(username: any) {
+  constructor(username: string) {
     this.username = username;
     this.lobby = null;
   }
@@ -85,7 +85,7 @@ async function findUser(username: string, password?: string): Promise<object|nul
 
 
 // TODO forbidden symbols
-async function register(username: any, password: string) {
+async function register(username: string, password: string) {
   const existingUser = await findUser(username);
   if (existingUser)
     return null;
@@ -96,7 +96,7 @@ async function register(username: any, password: string) {
   });
 }
 
-async function genSessionCookie(username: any, password: any) {
+async function genSessionCookie(username: string, password: string) {
   const user = await findUser(username, password);
   if (!user)
     return null;
@@ -177,7 +177,7 @@ expressApp.post('/login', async (req: express.Request, res: express.Response) =>
   res.end();
 });
 
-expressApp.get('/whoami', async (req: {cookies: {session: any;};}, res: {setHeader: (arg0: string, arg1: string) => void; status: (arg0: number) => void; write: (arg0: string) => void; end: () => void;}) => {
+expressApp.get('/whoami', async (req: express.Request, res: express.Response) => {
   res.setHeader('Content-Type', 'application/json');
 
   const session = req.cookies.session;
