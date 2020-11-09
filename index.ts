@@ -124,6 +124,7 @@ expressApp.use(cookieParser());
 async function login(username: string, password: string, res: express.Response) {
   const cookie = await genSessionCookie(username, password);
   res.cookie('session', cookie);
+  res.writeHead(200);
   res.write('<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="Refresh" content="0; URL=/index.html"></head></html>');
   if (!(username in activeSessions))
     activeSessions[username] = new Session(username);
@@ -132,7 +133,7 @@ async function login(username: string, password: string, res: express.Response) 
 expressApp.post('/register', async (req: express.Request, res: express.Response) => {
   if (typeof req.body.username != 'string' || typeof req.body.password != 'string') {
     res.setHeader('Content-Type', 'text/plain');
-    res.status(400);
+    res.writeHead(400);
     res.write('BAD REQUEST');
     res.end();
     return;
@@ -144,11 +145,11 @@ expressApp.post('/register', async (req: express.Request, res: express.Response)
 
   const result = await register(username, password);
   if (!result) {
-    res.status(400);
+    res.writeHead(400);
     res.write('<!DOCTYPE html><html><head><meta charset="utf-8">Username taken.<br><button onclick="window.location=\'/\'">Go back</button>');
   }
   else {
-    login(username, password, res);
+    await login(username, password, res);
   }
   res.end();
 });
@@ -162,17 +163,19 @@ expressApp.post('/login', async (req: express.Request, res: express.Response) =>
     return;
   }
 
-  res.setHeader('Content-Type', 'text/html');
   const username = req.body.username;
   const password = req.body.password;
   const user = await findUser(username, password);
 
+
   if (!user) {
     res.status(400);
+    res.setHeader('Content-Type', 'text/html');
     res.write('<!DOCTYPE html><html><head><meta charset="utf-8">Invalid username or password<br><button onclick="window.location=\'/\'">Go back</button>');
   }
   else {
-    login(username, password, res);
+    res.setHeader('Content-Type', 'text/html');
+    await login(username, password, res);
   }
   res.end();
 });
