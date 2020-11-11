@@ -70,7 +70,7 @@ const lobbies: {[username: string]: Lobby} = {};
 
 async function runMongo() {
   await mongoClient.connect();
-  db = mongoClient.db("admin");
+  db = mongoClient.db("ccg");
   users = db.collection("users");
   sessions = db.collection("sessions");
   await db.command({ ping: 1 });
