@@ -13,10 +13,38 @@ body {
 }
 
 #header {
+	display: flex;
+	align-items: baseline;
+
 	font-family: 'Cinzel Decorative', cursive;
 	font-weight: bold;
+	padding: 1rem 4rem;
+	
+	margin: 0;
+	list-style-type: none;
+}
+
+#header > * {
+	flex: 0 0 0;
+	margin: 0 1.2rem;
+	white-space: nowrap;
+	-webkit-user-select: none; /* Safari */
+	-ms-user-select: none;     /* IE 10 and IE 11 */
+	user-select: none;
+}
+
+.clickable {
+	cursor: pointer;
+}
+
+.clickable:hover {
+	text-decoration: underline;
+}
+
+
+#header>.logo {
+	flex: 1 0 0;
 	font-size: 1.5rem;
-	padding: 1rem 3rem;
 }
 
 #lr {

@@ -10,11 +10,20 @@
 	</head>
 	<body>
 
-		<div id="header">
-			Sa6occG
-		</div>
+		<ul id="header">
+			<p class="logo">Sa6occG</p>
 
-		<% if (!loggedIn) { %>
+			<% if (loggedIn) { %>
+			<li class="clickable">Decks</li>
+			<li class="clickable">Cards</li>
+			<li class="clickable" onclick="logOut()">Sign out</li>
+			<li style="color: gold;"><%= username %></li>
+			<% } %>
+		</ul>
+
+		<% if (loggedIn) { %>
+		<%-    include('loggedin') %>
+		<% } else { %>
 		<%-    include('loginregister') %>
 		<% } %>
 

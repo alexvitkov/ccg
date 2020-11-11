@@ -142,6 +142,7 @@ expressApp.get('/', async (req, res) => {
 
   if (typeof sessionCookie === 'string') {
     const session = await sessions.findOne({cookie: sessionCookie});
+      console.log(session)
     if (session) {
       username = session.username; 
     }
@@ -152,9 +153,11 @@ expressApp.get('/', async (req, res) => {
   else if ('session' in req.cookies) {
     invalidSessionCookie = true;
   }
+
+  console.log(username)
   
   res.render('index', {
-    loggedIn: username != null,
+    loggedIn: username !== null,
     username: username,
   });
 });
