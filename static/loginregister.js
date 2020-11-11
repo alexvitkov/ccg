@@ -9,6 +9,9 @@ const registerButton = document.getElementById("registerButton");
 const registerPassword = document.getElementById("registerPassword");
 const registerPassword2 = document.getElementById("registerPassword2");
 
+const loginUsername = document.getElementById("loginUsername");
+const loginPassword = document.getElementById("loginPassword");
+
 const inputErr = document.getElementById("inputErr");
 
 function showRegisterForm() {
@@ -54,6 +57,7 @@ function register() {
     }
   };
   xhr.send(JSON.stringify(body));
+  return false;
 }
 
 function login() {
@@ -79,6 +83,7 @@ function login() {
     }
   };
   xhr.send(JSON.stringify(body));
+  return false;
 }
 
 const userNameRegex = /^[a-zA-Z0-9.\-_]*$/;
@@ -169,3 +174,4 @@ function updateInputErr() {
   registerButton.disabled = err;
   return err;
 }
+

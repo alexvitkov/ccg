@@ -4,22 +4,22 @@
 		<button id="registerFormButton" onclick="showRegisterForm()">Create account</button>
 	</div>
 	<div id="lrforms">
-		<div id="loginForm">
+		<form id="loginForm" onsubmit="return login()">
 			<label>Username</label>
 			<input id="loginUsername" type="text">
 			<label>Password</label>
 			<input id="loginPassword" type="password">
-			<button onclick="login()">Log in</button>
-		</div>
+			<input type="submit" value="Log in" onclick="login()">
+		</form>
 
-		<div id="registerForm" style="visibility: hidden;">
+		<form id="registerForm" style="visibility: hidden; onsubmit="return register()">
 			<label>Username</label>
 			<input id="registerUsername" oninput="regUsernameChange()" type="text">
 			<label>Password</label>
 			<input id="registerPassword" oninput="regPasswordChange()" type="password">
 			<label>Repeat Password</label>
 			<input id="registerPassword2" oninput="regPasswordChange()" type="password">
-			<button id="registerButton" onclick="register()" >Create Account</button>
+			<input type="submit" id="registerButton" value="Create Account">
 		</div>
 	</div>
 </div>

@@ -74,19 +74,19 @@ button,input {
 	margin: 0.2rem;
 }
 
-input[type=text]:focus, input[type=password]:focus, button:hover {
+input[type=text]:focus, input[type=password]:focus, button:hover, input[type=submit]:hover {
 	border-bottom: 2px solid #9b6991;
 	background: #623959;
 }
 
-button:disabled {
+button:disabled, input[type=submit]:disabled {
 	cursor: inherit;
 	color: #917d91;
 	background: #573657;
 	border-bottom: 2px solid #714e71;
 }
 
-button {
+button, input[type=submit] {
 	cursor: pointer;
 }
 
@@ -102,8 +102,9 @@ button {
 	grid-row: 1;
 }
 
-#lr button, #lr label {
+#lr button, #lr label, #lr input[type=submit] {
 	margin-top: 0.5rem;
+	display: block;
 }
 
 #lrbuttons > button {
@@ -120,15 +121,11 @@ button {
 	border-bottom: 2px solid #573757;
 }
 
-input[type=text], input[type=password] {
+#lr input[type=text], input[type=password] {
 	width: 100%;
 }
 
-#lr label {
-	display: block;
-}
-
-#lr button {
+#lr label, #lr button, #lr input[type=submit] {
 	display: block;
 }
 
