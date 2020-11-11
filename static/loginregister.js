@@ -34,7 +34,7 @@ function register() {
   regUsernameChange();
   regPasswordChange(); 
   if (!updateInputErr())
-    return;
+    return false;
 
   var xhr = new XMLHttpRequest();
   xhr.open("POST", "/register2", true);
