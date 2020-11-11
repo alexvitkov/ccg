@@ -46,6 +46,7 @@ function register() {
         const resp = JSON.parse(xhr.responseText);
         // TODO future generations need to fix this
         document.cookie=`session=${resp.session};SameSite=Strict;Expires=Fri, 1 Jan 2100 05:30:00 GMT`;
+        document.location='/';
       }
       else {
         // TODO
