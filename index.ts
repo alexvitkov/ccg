@@ -14,6 +14,11 @@ var users: Collection<any>;
 var sessions: Collection<any>;
 
 const expressApp: express.Express = express();
+expressApp.set('view engine', 'ejs');
+expressApp.use('/static', express.static('static'));
+expressApp.use(bodyParser.urlencoded({ extended: true }));
+expressApp.use(bodyParser.json({ limit: 1024 }));
+expressApp.use(cookieParser());
 
 class Session {
   username: string;
@@ -43,6 +48,7 @@ class Session {
   }
 }
 
+
 class Lobby {
   creatorSession: Session;
   otherPlayer: Session;
@@ -61,20 +67,23 @@ class Lobby {
 const activeSessions: {[username: string]: Session } = {};
 const lobbies: {[username: string]: Lobby} = {};
 
+
 async function runMongo() {
   await mongoClient.connect();
-  db = mongoClient.db("ccg");
+  db = mongoClient.db("admin");
   users = db.collection("users");
   sessions = db.collection("sessions");
   await db.command({ ping: 1 });
   console.log("Connected to MongoDB server");
 }
 
+
 function runExpress() {
   expressApp.listen(PORT, () => {
     console.log(`Express.js server started at port ${PORT}`)
   });
 }
+
 
 async function findUser(username: string, password?: string): Promise<object|null> {
   var query: any = {username:username};
@@ -84,10 +93,16 @@ async function findUser(username: string, password?: string): Promise<object|nul
 }
 
 
-// TODO forbidden symbols
 async function register(username: string, password: string) {
   const existingUser = await findUser(username);
   if (existingUser)
+    return null;
+
+  if (username.length < 3 || username.length > 16)
+    return null;
+  if (!username.match(/^[a-zA-Z0-9.\-_]*$/))
+    return null;
+  if (password.length < 8 )
     return null;
 
   return await users.insertOne({
@@ -95,6 +110,7 @@ async function register(username: string, password: string) {
     password: password
   });
 }
+
 
 async function genSessionCookie(username: string, password: string) {
   const user = await findUser(username, password);
@@ -108,107 +124,101 @@ async function genSessionCookie(username: string, password: string) {
     cookie = cookieBytes.toString('hex');
   } while (await sessions.findOne({ cookie: cookie }));
 
-  users.updateOne({username: username},
-                  { $push: { sessions: cookie } }
-                 );
-                 sessions.insertOne({cookie: cookie, username: username});
-                 return cookie;
+  users.updateOne(
+    {username: username},
+    { $push: { sessions: cookie } }
+  );
+  sessions.insertOne({cookie: cookie, username: username});
+  return cookie;
 }
 
 
 
-expressApp.use(express.static('static'));
-expressApp.use(bodyParser.urlencoded({ extended: true }));
-expressApp.use(cookieParser());
 
-async function login(username: string, password: string, res: express.Response) {
-  const cookie = await genSessionCookie(username, password);
-  res.cookie('session', cookie);
-  res.writeHead(200);
-  res.write('<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="Refresh" content="0; URL=/index.html"></head></html>');
-  if (!(username in activeSessions))
-    activeSessions[username] = new Session(username);
-}
+expressApp.get('/', async (req, res) => {
+  const sessionCookie = req.cookies.session;
+  var invalidSessionCookie = false;
+  var username: string = null;
 
-expressApp.post('/register', async (req: express.Request, res: express.Response) => {
-  if (typeof req.body.username != 'string' || typeof req.body.password != 'string') {
-    res.setHeader('Content-Type', 'text/plain');
-    res.writeHead(400);
-    res.write('BAD REQUEST');
-    res.end();
-    return;
-  }
-
-  res.setHeader('Content-Type', 'text/html');
-  const username = req.body.username;
-  const password = req.body.password;
-
-  const result = await register(username, password);
-  if (!result) {
-    res.writeHead(400);
-    res.write('<!DOCTYPE html><html><head><meta charset="utf-8">Username taken.<br><button onclick="window.location=\'/\'">Go back</button>');
-  }
-  else {
-    await login(username, password, res);
-  }
-  res.end();
-});
-
-expressApp.post('/login', async (req: express.Request, res: express.Response) => {
-  if (typeof req.body.username != 'string' || typeof req.body.password != 'string') {
-    res.setHeader('Content-Type', 'text/plain');
-    res.status(400);
-    res.write('BAD REQUEST');
-    res.end();
-    return;
-  }
-
-  const username = req.body.username;
-  const password = req.body.password;
-  const user = await findUser(username, password);
-
-
-  if (!user) {
-    res.status(400);
-    res.setHeader('Content-Type', 'text/html');
-    res.write('<!DOCTYPE html><html><head><meta charset="utf-8">Invalid username or password<br><button onclick="window.location=\'/\'">Go back</button>');
-  }
-  else {
-    res.setHeader('Content-Type', 'text/html');
-    await login(username, password, res);
-  }
-  res.end();
-});
-
-expressApp.get('/whoami', async (req: express.Request, res: express.Response) => {
-  res.setHeader('Content-Type', 'application/json');
-
-  const session = req.cookies.session;
-  if (typeof session != 'string') {
-    // no session cookie
-    res.status(400);
-    res.write('{}');
-    res.end();
-  }
-  else {
-    const result = await sessions.findOne({cookie: session});
-    if (!result) {
-      // invalid session cookie
-      res.status(400);
-      res.write('{}');
-      res.end();
+  if (typeof sessionCookie === 'string') {
+    const session = await sessions.findOne({cookie: sessionCookie});
+    if (session) {
+      username = session.username; 
     }
     else {
-      res.write(`{"username":"${result.username}"}`);
-      res.end();
+      invalidSessionCookie = true;
     }
   }
+  else if ('session' in req.cookies) {
+    invalidSessionCookie = true;
+  }
+  
+  res.render('index', {
+    loggedIn: username != null,
+    username: username,
+  });
 });
+
+
+expressApp.post('/register2', async (req: express.Request, res: express.Response) => {
+  const { username, password }  = req.body;
+
+  res.setHeader('Content-Type', 'application/json');
+
+  if (typeof username !== 'string' || typeof password !== 'string') {
+    res.status(400).send('{}');
+    return;
+  }
+
+  const result = await register(username, password);
+  if (result) {
+    const cookie = await genSessionCookie(username, password);
+    res.send(JSON.stringify({
+      username: username,
+      session: cookie
+    }));
+  }
+  else {
+    res.status(400).send('{}');
+  }
+});
+
+
+expressApp.post('/login2', async (req: express.Request, res: express.Response) => {
+  const { username, password } = req.body;
+
+  res.setHeader('Content-Type', 'application/json');
+
+  if (typeof username !== 'string' || typeof password !== 'string') {
+    res.status(400).send('{}');
+    return;
+  }
+
+  const result = await findUser(username, password);
+  console.log(result);
+  if (result) {
+    const cookie = await genSessionCookie(username, password);
+    res.send(JSON.stringify({
+      username: username,
+      session: cookie
+    }));
+  }
+  else {
+    res.status(400).send('{}');
+  }
+});
+
+
+expressApp.get('/usernameTaken', async (req: express.Request, res: express.Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(`{"taken":${!!await users.findOne({username: req.query.username})}}`);
+});
+
 
 expressApp.get('/lobbies', async (_, res) => {
   res.setHeader('Content-Type', 'application/json');
-
 });
+
 
 runMongo();
 runExpress();

@@ -1,0 +1,27 @@
+<div id="lr">
+	<div id="lrbuttons">
+		<button id="loginFormButton" class="active" onclick="showLoginForm()">Log in</button>
+		<button id="registerFormButton" onclick="showRegisterForm()">Create account</button>
+	</div>
+	<div id="lrforms">
+		<div id="loginForm">
+			<label>Username</label>
+			<input id="loginUsername" type="text">
+			<label>Password</label>
+			<input id="loginPassword" type="password">
+			<button onclick="login()">Log in</button>
+		</div>
+
+		<div id="registerForm" style="visibility: hidden;">
+			<label>Username</label>
+			<input id="registerUsername" oninput="regUsernameChange()" type="text">
+			<label>Password</label>
+			<input id="registerPassword" oninput="regPasswordChange()" type="password">
+			<label>Repeat Password</label>
+			<input id="registerPassword2" oninput="regPasswordChange()" type="password">
+			<button id="registerButton" onclick="register()" >Create Account</button>
+		</div>
+	</div>
+</div>
+<p id="inputErr" style="font-size: 1.5rem; font-weight: bold;"></p>
+<script src="/static/loginregister.js"></script>

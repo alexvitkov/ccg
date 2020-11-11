@@ -1,15 +1,122 @@
+:root {
+	font-size: 14pt;
+}
+
+body, html {
+	margin: 0;
+}
+
 body {
-	font-family: sans-serif;
+	background: #241729;
+	color: white;
+	font-family: 'Noto Serif', serif;
 }
 
-form {
-	padding: 15px;
-	margin: 20px 0px;
-	background: #eee;
-	border: 2px solid grey;
-	max-width: 500px;
+#header {
+	font-family: 'Cinzel Decorative', cursive;
+	font-weight: bold;
+	font-size: 1.5rem;
+	padding: 1rem 3rem;
 }
 
-h1, h2 {
-	margin: 0px 0px 10px 0px;
+#lr {
+	background: #422642;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -70%);
+	min-width: 25rem;
+	border-bottom: 2px solid #573757;
 }
+
+#lrbuttons {
+	display: flex;
+}
+
+button,input {
+	border: none;
+	background: #553951;
+	border-bottom: 2px solid #714e71;
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
+	padding: 0.3rem 0.3rem;
+	box-sizing: border-box;
+	transition: background 0.2s, border-bottom 0.2s, color 0.1s;
+	margin: 0.2rem;
+}
+
+input[type=text]:focus, input[type=password]:focus, button:hover {
+	border-bottom: 2px solid #9b6991;
+	background: #623959;
+}
+
+button:disabled {
+	cursor: inherit;
+	color: #917d91;
+	background: #573657;
+	border-bottom: 2px solid #714e71;
+}
+
+button {
+	cursor: pointer;
+}
+
+
+#lrforms {
+	padding: 1.3rem;
+	display: grid;
+}
+
+#registerForm, #loginForm {
+	/* overlap them */
+	grid-column: 1;
+	grid-row: 1;
+}
+
+#lr button, #lr label {
+	margin-top: 0.5rem;
+}
+
+#lrbuttons > button {
+	margin: 0;
+	transition: background 0.2s, color 0.2s;
+	color: #b1a2b1;
+	flex: 1 0 0;
+	padding: 0.5rem 0rem;
+	font-family: inherit;
+	background: inherit;
+	border: 0;
+	font-size: 1.3rem;
+	white-space: nowrap;
+	border-bottom: 2px solid #573757;
+}
+
+input[type=text], input[type=password] {
+	width: 100%;
+}
+
+#lr label {
+	display: block;
+}
+
+#lr button {
+	display: block;
+}
+
+input:focus, button:focus {
+	outline: none;
+}
+
+#lrbuttons > button:hover {
+	background: #53314c;
+	color: inherit;
+}
+
+#lrbuttons > button.active {
+	color: inherit;
+	cursor: inherit;
+	background: #623959;
+	border-bottom: 2px solid #9b6991;
+}
+
