@@ -70,13 +70,19 @@ button,input {
 	color: inherit;
 	padding: 0.3rem 0.3rem;
 	box-sizing: border-box;
-	transition: background 0.2s, border-bottom 0.2s, color 0.1s;
+	transition: background 0.5s, border-bottom 0.5s, color 0.5s;
 	margin: 0.2rem;
 }
 
 input[type=text]:focus, input[type=password]:focus, button:hover, input[type=submit]:hover {
 	border-bottom: 2px solid #9b6991;
 	background: #623959;
+	transition: background 0.1s, border-bottom 0.2s, color 0.1s;
+}
+
+button, input[type=submit] {
+	cursor: pointer;
+	padding: 0.3rem 1rem;
 }
 
 button:disabled, input[type=submit]:disabled {
@@ -86,9 +92,6 @@ button:disabled, input[type=submit]:disabled {
 	border-bottom: 2px solid #714e71;
 }
 
-button, input[type=submit] {
-	cursor: pointer;
-}
 
 
 #lrforms {
@@ -115,7 +118,6 @@ button, input[type=submit] {
 
 #lrbuttons > button {
 	margin: 0;
-	transition: background 0.2s, color 0.2s;
 	color: #b1a2b1;
 	flex: 1 0 0;
 	padding: 0.5rem 0rem;
@@ -149,5 +151,13 @@ input:focus, button:focus {
 	cursor: inherit;
 	background: #623959;
 	border-bottom: 2px solid #9b6991;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table, tr, td {
+	border: 1px solid white;
 }
 
