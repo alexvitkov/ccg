@@ -93,6 +93,7 @@ button, input[type=submit] {
 
 #lrforms {
 	padding: 1.3rem;
+	padding-top: 0.9rem;
 	display: grid;
 }
 
@@ -102,10 +103,15 @@ button, input[type=submit] {
 	grid-row: 1;
 }
 
-#lr button, #lr label, #lr input[type=submit] {
-	margin-top: 0.5rem;
+#lr button, #lr label  {
+	margin-top: 0.4rem;
 	display: block;
 }
+
+#lr input[type=submit] {
+	margin-top: .8rem;
+}
+
 
 #lrbuttons > button {
 	margin: 0;

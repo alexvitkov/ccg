@@ -20,6 +20,7 @@ expressApp.use(bodyParser.urlencoded({ extended: true }));
 expressApp.use(bodyParser.json({ limit: 1024 }));
 expressApp.use(cookieParser());
 
+
 class Session {
   username: string;
   lobby: Lobby;

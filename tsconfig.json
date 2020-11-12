@@ -3,6 +3,7 @@
     "module": "commonjs",
     "target": "ES6",
     "sourceMap": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "outDir": "dist"
   }
 }
