@@ -2,7 +2,9 @@ import {Collection, Db, MongoClient} from "mongodb";
 import express from 'express';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
+import cookie from 'cookie';
 import crypto from 'crypto';
+import ws from 'ws';
 
 
 const mongoDbUri = process.env.MONGOURI || "mongodb://127.0.0.1:27017/?poolSize=20&w=majority";
@@ -11,7 +13,7 @@ const PORT       = process.env.PORT     ||  8000;
 const mongoClient: MongoClient = new MongoClient(mongoDbUri, { useUnifiedTopology: true });
 var db: Db;
 var users: Collection<any>;
-var sessions: Collection<any>;
+var sessionsColl: Collection<any>;
 
 const expressApp: express.Express = express();
 expressApp.set('view engine', 'ejs');
@@ -31,7 +33,7 @@ class Session {
   }
 
   deleteLobby() {
-    if (this.lobby != null && this.lobby.creatorSession === this) {
+    if (this.lobby !== null && this.lobby.creatorSession === this) {
       lobbies[this.username] = null;
     }
   }
@@ -65,7 +67,7 @@ class Lobby {
   }
 }
 
-const activeSessions: {[username: string]: Session } = {};
+const activeSessions: {[session: string]: Session } = {};
 const lobbies: {[username: string]: Lobby} = {};
 
 
@@ -73,15 +75,40 @@ async function runMongo() {
   await mongoClient.connect();
   db = mongoClient.db("ccg");
   users = db.collection("users");
-  sessions = db.collection("sessions");
+  sessionsColl = db.collection("sessions");
   await db.command({ ping: 1 });
   console.log("Connected to MongoDB server");
 }
 
 
 function runExpress() {
-  expressApp.listen(PORT, () => {
+  const wsServer = new ws.Server({ noServer: true });
+
+  const server = expressApp.listen(PORT, () => {
     console.log(`Express.js server started at port ${PORT}`)
+  });
+  server.on('upgrade', (req, tcpSocket, head) => {
+    const cookies = cookie.parse(req.headers.cookie);
+    const session = cookies.session;
+
+    wsServer.handleUpgrade(req, tcpSocket, head, sock => {
+      if (session && typeof session !== 'string') {
+        (sock as any).session = session;
+      }
+      wsServer.emit('connection', sock, req);
+    });
+  });
+
+  wsServer.on('connection', sock => {
+    const session: string = (sock as any).session;
+    if (!session || !(session in activeSessions)) {
+      sock.close(4001, 'Invalid session');
+    }
+    else {
+      sock.on('message', message => {
+        console.log(`WS[${session}]: `, message);
+      });
+    }
   });
 }
 
@@ -113,27 +140,26 @@ async function register(username: string, password: string) {
 }
 
 
-async function genSessionCookie(username: string, password: string) {
+async function createSession(username: string, password: string) {
   const user = await findUser(username, password);
   if (!user)
     return null;
 
-  var cookie: string;
+  var sessionCookie: string;
 
   do {
     const cookieBytes = crypto.randomBytes(24);
-    cookie = cookieBytes.toString('hex');
-  } while (await sessions.findOne({ cookie: cookie }));
+    sessionCookie = cookieBytes.toString('hex');
+  } while (await sessionsColl.findOne({ cookie: sessionCookie }));
 
   users.updateOne(
     {username: username},
-    { $push: { sessions: cookie } }
+    { $push: { sessions: sessionCookie } }
   );
-  sessions.insertOne({cookie: cookie, username: username});
-  return cookie;
+  sessionsColl.insertOne({cookie: sessionCookie, username: username});
+  activeSessions[sessionCookie] = new Session(username);
+  return sessionCookie;
 }
-
-
 
 
 expressApp.get('/', async (req, res) => {
@@ -142,8 +168,7 @@ expressApp.get('/', async (req, res) => {
   var username: string = null;
 
   if (typeof sessionCookie === 'string') {
-    const session = await sessions.findOne({cookie: sessionCookie});
-      console.log(session)
+    const session = await sessionsColl.findOne({cookie: sessionCookie});
     if (session) {
       username = session.username; 
     }
@@ -155,8 +180,10 @@ expressApp.get('/', async (req, res) => {
     invalidSessionCookie = true;
   }
 
-  console.log(username)
-  
+  if (invalidSessionCookie) {
+    res.cookie('session', '', {maxAge: 0, sameSite: 'strict'});
+  }
+
   res.render('index', {
     loggedIn: username !== null,
     username: username,
@@ -176,7 +203,7 @@ expressApp.post('/register2', async (req: express.Request, res: express.Response
 
   const result = await register(username, password);
   if (result) {
-    const cookie = await genSessionCookie(username, password);
+    const cookie = await createSession(username, password);
     res.send(JSON.stringify({
       username: username,
       session: cookie
@@ -199,9 +226,8 @@ expressApp.post('/login2', async (req: express.Request, res: express.Response) =
   }
 
   const result = await findUser(username, password);
-  console.log(result);
   if (result) {
-    const cookie = await genSessionCookie(username, password);
+    const cookie = await createSession(username, password);
     res.send(JSON.stringify({
       username: username,
       session: cookie
@@ -216,11 +242,6 @@ expressApp.post('/login2', async (req: express.Request, res: express.Response) =
 expressApp.get('/usernameTaken', async (req: express.Request, res: express.Response) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(`{"taken":${!!await users.findOne({username: req.query.username})}}`);
-});
-
-
-expressApp.get('/lobbies', async (_, res) => {
-  res.setHeader('Content-Type', 'application/json');
 });
 
 

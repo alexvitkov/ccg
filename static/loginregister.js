@@ -71,6 +71,7 @@ function login() {
   xhr.onreadystatechange = () => {
     if (xhr.readyState == XMLHttpRequest.DONE) {
       if (xhr.status == 200) {
+        console.log(xhr.responseText);
         const resp = JSON.parse(xhr.responseText);
         // TODO future generations need to fix this as well
         document.cookie=`session=${resp.session};SameSite=Strict;Expires=Fri, 1 Jan 2100 05:30:00 GMT`;
