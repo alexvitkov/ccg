@@ -24,52 +24,41 @@ expressApp.use(cookieParser());
 
 
 class Session {
+  userId: string;
   username: string;
+  sock: ws;
   lobby: Lobby;
 
-  constructor(username: string) {
-    this.username = username;
-    this.lobby = null;
+  constructor(userInDb: any) {
+    this.userId = userInDb.id.toString('base64');
+    this.username = userInDb.username;
   }
-
-  deleteLobby() {
-    if (this.lobby !== null && this.lobby.creatorSession === this) {
-      lobbies[this.username] = null;
-    }
-  }
-
-  createLobby() {
-    this.deleteLobby();
-    lobbies[this.username] = new Lobby(this);
-  }
-
-  joinLobby(lobby: Lobby) {
-    if (!lobby.otherPlayer) {
-      lobby.otherPlayer = this;
-      lobby.start();
-    }
+  send(msg) {
+    if (this.sock) { this.sock.send(msg); }
   }
 }
 
-
 class Lobby {
+  id: string;
+  name: string;
   creatorSession: Session;
   otherPlayer: Session;
-  lobbyName: string;
 
   constructor(creatorSession: Session) {
     this.creatorSession = creatorSession;
-    this.lobbyName = creatorSession.username + "'s lobby";
-  }
+    this.name = creatorSession.username + "'s lobby";
+    
+    do {
+      this.id = crypto.randomBytes(8).toString('base64');
+    } while (this.id in lobbies2);
 
-  start() {
-    // TODO
+    lobbies2[this.id] = this;
   }
 }
 
-const activeSessions: {[session: string]: Session } = {};
-const lobbies: {[username: string]: Lobby} = {};
-
+// const activeSessions: {[session: string]: Session } = {};
+const activeSessions2: {[userId: string]: Session } = {};
+const lobbies2: {[lobbyId: string]: Lobby} = {};
 
 async function runMongo() {
   await mongoClient.connect();
@@ -81,6 +70,29 @@ async function runMongo() {
 }
 
 
+async function getSessionByCookie(cookie: string): Promise<Session> {
+  const sessionFromDb = await sessionsColl.findOne({cookie: cookie});
+  const userId: Buffer = sessionFromDb.userId;
+  const userId64 = userId.toString('base64');
+
+  if (userId64 in sessionsColl) {
+    console.log(1, activeSessions2[userId64]);
+    return activeSessions2[userId64];
+  }
+  else {
+    const user = await users.findOne({id: userId});
+    if (!user) {
+      return null;
+    }
+    else {
+      activeSessions2[userId64] = new Session(user)
+      console.log(2, activeSessions2[userId64]);
+      return activeSessions2[userId64];
+    }
+  }
+}
+
+
 function runExpress() {
   const wsServer = new ws.Server({ noServer: true });
 
@@ -89,40 +101,105 @@ function runExpress() {
   });
   server.on('upgrade', (req, tcpSocket, head) => {
     const cookies = cookie.parse(req.headers.cookie);
-    const session = cookies.session;
+    const sessionCookie = cookies.session;
 
-    wsServer.handleUpgrade(req, tcpSocket, head, sock => {
-      if (session && typeof session !== 'string') {
-        (sock as any).session = session;
+    wsServer.handleUpgrade(req, tcpSocket, head, async sock => {
+      if (typeof sessionCookie === 'string') {
+        (sock as any).session = await getSessionByCookie(sessionCookie);
       }
       wsServer.emit('connection', sock, req);
     });
   });
 
   wsServer.on('connection', sock => {
-    const session: string = (sock as any).session;
-    if (!session || !(session in activeSessions)) {
+    const session = (sock as any).session;
+    if (!session) {
       sock.close(4001, 'Invalid session');
     }
     else {
+      session.sock = sock;
       sock.on('message', message => {
-        console.log(`WS[${session}]: `, message);
+        var msg: object = null;
+        try {
+          msg = JSON.parse(message as string);
+        } catch {
+          sock.close(4002, 'Invalid message');
+        }
+        if (typeof msg !== 'object') {
+          sock.close(4003, 'Invalid message');
+        }
+        else if (sock.readyState === sock.OPEN) {
+          if (!handleWsMessage(session, msg))
+            sock.close(4004, 'Invalid message');
+        }
       });
     }
   });
 }
 
 
-async function findUser(username: string, password?: string): Promise<object|null> {
-  var query: any = {username:username};
-  if (password) query.password = password;
-  const user = await users.findOne(query);
-  return user;
+function handleWsMessage(session: Session, message: {[key:string]:any}) {
+  console.log(`WS[${session.username}]: `, message);
+
+  switch (message.message) {
+    case 'createLobby': {
+      if (!session.lobby) {
+        session.lobby = new Lobby(session);
+      }
+      refreshLobbiesForPlayer(session);
+      break;
+    }
+
+    case 'listLobbies': {
+      refreshLobbiesForPlayer(session);
+      break;
+    }
+
+    case 'leaveLobby': {
+      if (session.lobby) {
+        const lobby = session.lobby;
+
+        if (lobby.creatorSession === session) {
+          delete lobbies2[lobby.id];
+          if (lobby.otherPlayer) {
+            lobby.otherPlayer.lobby = null;
+            refreshLobbiesForPlayer(session.lobby.otherPlayer);
+          }
+        }
+        else {
+          session.lobby = null;
+          refreshLobbiesForPlayer(lobby.creatorSession);
+        }
+      }
+      session.lobby = null;
+      refreshLobbiesForPlayer(session);
+      break;
+    }
+
+    default: {
+      return false;
+    }
+  }
+  return true;
 }
 
 
+function refreshLobbiesForPlayer(session: Session) {
+  const l = Object.values(lobbies2).map(lobby => { return {
+    id: lobby.id,
+    name: lobby.name,
+    players: lobby.otherPlayer ? 2 : 1
+  }});
+  session.send(JSON.stringify({
+    message: 'listLobbies',
+    success: true,
+    lobbyId: session.lobby?.id,
+    lobbies: l
+  }));
+}
+
 async function register(username: string, password: string) {
-  const existingUser = await findUser(username);
+  const existingUser = await users.findOne({username:username});
   if (existingUser)
     return null;
 
@@ -133,61 +210,75 @@ async function register(username: string, password: string) {
   if (password.length < 8 )
     return null;
 
-  return await users.insertOne({
+  var userId: Buffer;
+  do {
+    userId = crypto.randomBytes(4);
+  } while (await users.findOne({ userId: userId }));
+
+  await users.insertOne({
     username: username,
-    password: password
+    password: password,
+    id: userId
   });
+  return users.findOne({id:userId});
 }
 
-
-async function createSession(username: string, password: string) {
-  const user = await findUser(username, password);
-  if (!user)
+async function createSession(userId: Buffer, password: string) {
+  const user = await users.findOne({id: userId, password: password});
+  if (!user) {
+    console.log('no user', userId, password)
     return null;
+  }
 
   var sessionCookie: string;
-
   do {
     const cookieBytes = crypto.randomBytes(24);
     sessionCookie = cookieBytes.toString('hex');
   } while (await sessionsColl.findOne({ cookie: sessionCookie }));
 
   users.updateOne(
-    {username: username},
+    {userId: userId},
     { $push: { sessions: sessionCookie } }
   );
-  sessionsColl.insertOne({cookie: sessionCookie, username: username});
-  activeSessions[sessionCookie] = new Session(username);
+  sessionsColl.insertOne({cookie: sessionCookie, userId: userId});
+  activeSessions2[userId.toString('base64')] = new Session(user);
   return sessionCookie;
 }
 
 
 expressApp.get('/', async (req, res) => {
   const sessionCookie = req.cookies.session;
-  var invalidSessionCookie = false;
-  var username: string = null;
 
   if (typeof sessionCookie === 'string') {
-    const session = await sessionsColl.findOne({cookie: sessionCookie});
-    if (session) {
-      username = session.username; 
+    const sessionDb = await sessionsColl.findOne({cookie: sessionCookie});
+    if (!sessionDb) {
+      // Invalid session cookie
+      res.cookie('session', '', {maxAge: 0, sameSite: 'strict'});
     }
     else {
-      invalidSessionCookie = true;
-    }
-  }
-  else if ('session' in req.cookies) {
-    invalidSessionCookie = true;
-  }
+      const userId = sessionDb.userId;
+      const userId64 = userId.toString('base64');
+      const user = await users.findOne({id: userId});
 
-  if (invalidSessionCookie) {
-    res.cookie('session', '', {maxAge: 0, sameSite: 'strict'});
+      if (!(userId64 in activeSessions2))
+        activeSessions2[userId64] = new Session(user);
+
+      const session = activeSessions2[userId64];
+
+      res.render('index', {
+        loggedIn: true,
+        username: session.username,
+        inLobby: !!session.lobby,
+        lobbyId: session.lobby ? session.lobby.id : 0,
+      });
+      return;
+    }
   }
 
   res.render('index', {
-    loggedIn: username !== null,
-    username: username,
+    loggedIn: false,
   });
+
 });
 
 
@@ -201,9 +292,9 @@ expressApp.post('/register2', async (req: express.Request, res: express.Response
     return;
   }
 
-  const result = await register(username, password);
+  const result = <any>await register(username, password);
   if (result) {
-    const cookie = await createSession(username, password);
+    const cookie = await createSession(result.id, password);
     res.send(JSON.stringify({
       username: username,
       session: cookie
@@ -225,9 +316,9 @@ expressApp.post('/login2', async (req: express.Request, res: express.Response) =
     return;
   }
 
-  const result = await findUser(username, password);
+  const result = await users.findOne({username: username, password:password});
   if (result) {
-    const cookie = await createSession(username, password);
+    const cookie = await createSession(result.id, password);
     res.send(JSON.stringify({
       username: username,
       session: cookie
