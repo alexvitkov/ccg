@@ -2,7 +2,7 @@
 	var lobbyId = "<%= lobbyId %>";
 </script>
 <div id="lobbies">
-	<button onclick="createLobby()"<%=inLobby ? ' disabled' : ''%>>Create a lobby</button>
+	<button id="createLobbyButton" onclick="createLobby()"<%=inLobby ? ' disabled' : ''%>>Create a lobby</button>
 	<button onclick="refreshLobbies()">Refresh</button>
 
 	<table id="lobbiesTable">
