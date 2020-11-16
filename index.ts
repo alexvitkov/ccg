@@ -142,9 +142,8 @@ function handleWsMessage(session: Session, message: {[key:string]:any}) {
 
 	switch (message.message) {
 		case 'createLobby': {
-			if (!session.lobby) {
+			if (!session.lobby)
 				session.lobby = new Lobby(session);
-			}
 			refreshLobbiesForPlayer(session);
 			break;
 		}
@@ -208,6 +207,7 @@ function refreshLobbiesForPlayer(session: Session) {
 		name: lobby.name,
 		players: lobby.otherPlayer ? 2 : 1
 	}});
+	// console.log(session);
 	const lobbyId = (session.lobby?.id);
 	session.send(JSON.stringify({
 		message: 'listLobbies',
@@ -280,9 +280,10 @@ expressApp.get('/', async (req, res) => {
 			const userId64 = userId.toString('base64');
 			const user = await users.findOne({id: userId});
 
-			if (!(userId64 in activeSessions2))
+			if (!(userId64 in activeSessions2)) {
 				console.log("get(/): creating session for " + user.username);
 				activeSessions2[userId64] = new Session(user);
+			}
 
 			const session = activeSessions2[userId64];
 
@@ -290,7 +291,7 @@ expressApp.get('/', async (req, res) => {
 				loggedIn: true,
 				username: session.username,
 				inLobby: !!session.lobby,
-				lobbyId: session.lobby ? session.lobby.id : 0,
+				lobbyId: session.lobby?.id || 0,
 			});
 			return;
 		}
