@@ -6,6 +6,8 @@ import cookie from 'cookie';
 import crypto from 'crypto';
 import ws from 'ws';
 
+import { Lobby, handleLobbyWsMessage } from './lobby';
+import { Session } from './session';
 
 const mongoDbUri = process.env.MONGOURI || "mongodb://127.0.0.1:27017/?poolSize=20&w=majority";
 const PORT       = process.env.PORT     ||  8000;
@@ -23,42 +25,8 @@ expressApp.use(bodyParser.json({ limit: 1024 }));
 expressApp.use(cookieParser());
 
 
-class Session {
-	userId: string;
-	username: string;
-	sock: ws;
-	lobby: Lobby;
-
-	constructor(userInDb: any) {
-		this.userId = userInDb.id.toString('base64');
-		this.username = userInDb.username;
-	}
-	send(msg) {
-		if (this.sock) { this.sock.send(msg); }
-	}
-}
-
-class Lobby {
-	id: string;
-	name: string;
-	creatorSession: Session;
-	otherPlayer: Session;
-
-	constructor(creatorSession: Session) {
-		this.creatorSession = creatorSession;
-		this.name = creatorSession.username + "'s lobby";
-
-		do {
-			this.id = crypto.randomBytes(8).toString('base64');
-		} while (this.id in lobbies2);
-
-		lobbies2[this.id] = this;
-	}
-}
-
 // const activeSessions: {[session: string]: Session } = {};
 const activeSessions2: {[userId: string]: Session } = {};
-const lobbies2: {[lobbyId: string]: Lobby} = {};
 
 async function runMongo() {
 	await mongoClient.connect();
@@ -139,83 +107,12 @@ function runExpress() {
 
 function handleWsMessage(session: Session, message: {[key:string]:any}) {
 	console.log(`WS[${session.username}]: `, message);
-
-	switch (message.message) {
-		case 'createLobby': {
-			if (!session.lobby)
-				session.lobby = new Lobby(session);
-			refreshLobbiesForPlayer(session);
-			break;
-		}
-
-		case 'listLobbies': {
-			refreshLobbiesForPlayer(session);
-			break;
-		}
-
-		case 'joinLobby': {
-			if (session.lobby !== null) {
-				leaveLobby(session);
-			}
-			const lobby = lobbies2[message.lobby];
-			if (lobby && !lobby.otherPlayer && lobby.creatorSession !== session) {
-				lobby.otherPlayer = session;
-				session.lobby = lobby;
-			}
-			refreshLobbiesForPlayer(session);
-			refreshLobbiesForPlayer(lobby.creatorSession);
-			break;
-		}
-
-		case 'leaveLobby': {
-			leaveLobby(session);
-			break;
-		}
-
-		default: {
-			return false;
-		}
+	if (handleLobbyWsMessage(session, message)) {
+		return true;
 	}
-	return true;
+	return false;
 }
 
-
-function leaveLobby(session: Session) {
-	if (session.lobby) {
-		const lobby = session.lobby;
-
-		if (lobby.creatorSession === session) {
-			delete lobbies2[lobby.id];
-			if (lobby.otherPlayer) {
-				lobby.otherPlayer.lobby = null;
-				refreshLobbiesForPlayer(session.lobby.otherPlayer);
-			}
-		}
-		else {
-			session.lobby = null;
-			lobby.otherPlayer = null;
-			refreshLobbiesForPlayer(lobby.creatorSession);
-		}
-	}
-	session.lobby = null;
-	refreshLobbiesForPlayer(session);
-}
-
-function refreshLobbiesForPlayer(session: Session) {
-	const l = Object.values(lobbies2).map(lobby => { return {
-		id: lobby.id,
-		name: lobby.name,
-		players: lobby.otherPlayer ? 2 : 1
-	}});
-	// console.log(session);
-	const lobbyId = (session.lobby?.id);
-	session.send(JSON.stringify({
-		message: 'listLobbies',
-		success: true,
-		lobbyId: lobbyId,
-		lobbies: l
-	}));
-}
 
 async function register(username: string, password: string) {
 	const existingUser = await users.findOne({username:username});
@@ -358,5 +255,6 @@ expressApp.get('/usernameTaken', async (req: express.Request, res: express.Respo
 });
 
 
-runMongo();
 runExpress();
+runMongo();
+
