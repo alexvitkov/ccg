@@ -157,8 +157,24 @@ table {
 	border-collapse: collapse;
 }
 
-table, tr, td {
-	border: 1px solid white;
+th {
+	padding: 0.3rem;
+	text-align: left;
+	background: #4f304b;
+}
+
+table, tr, td, th {
+	border: 1px solid #7b5777;
+}
+
+td {
+	padding: 0.3rem;
+}
+
+td > button {
+	box-sizing: border-box;
+	margin: 0;
+	width: 100%;
 }
 
 fieldset {

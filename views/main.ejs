@@ -3,9 +3,9 @@
 </script>
 <div id="lobbies">
 	<button id="createLobbyButton" onclick="createLobby()"<%=inLobby ? ' disabled' : ''%>>Create a lobby</button>
-	<button onclick="refreshLobbies()">Refresh</button>
+	<button onclick="refreshLobbies()">Refresh lobbies</button>
 
-	<table id="lobbiesTable">
+	<table id="lobbiesTable" style="display: none;">
 		<tr>
 			<th style="width: 30rem;">Lobby name</th>
 			<th style="width: 10rem;">State</th>
@@ -13,6 +13,8 @@
 			<th style="width: 10rem;"></th>
 		</tr>
 	</table>
+
+	<p id="noLobbies">There are no lobbies right now.</p>
 
 </div>
 

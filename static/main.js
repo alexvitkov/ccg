@@ -1,6 +1,7 @@
 var ws;
 
-var myLobby;
+var lobbyId = 0;
+var lobbyIsMine = false;
 var createLobbyButton = document.getElementById('createLobbyButton');
 
 function logOut() {
@@ -25,6 +26,7 @@ function wsConnect(callback) {
 		switch (msg.message) {
 			case 'listLobbies': {
 				lobbyId = msg.lobbyId;
+				lobbyIsMine = msg.lobbyIsMine;
 				renderNewLobbies(msg.lobbies);
 				break;
 			}
@@ -52,11 +54,25 @@ function createLobby() {
 }
 
 function renderNewLobbies(lobbies) {
+
 	const lobbiesTable = document.getElementById("lobbiesTable");
+	const noLobbies = document.getElementById("noLobbies");
+
+	createLobbyButton.disabled = !!lobbyId;
+
+	if (lobbies.length == 0) {
+		lobbiesTable.style.display = 'none';
+		noLobbies.style.display = 'block';
+		return;
+	}
+	else {
+		lobbiesTable.style.display = 'block';
+		noLobbies.style.display = 'none';
+	}
+
 	while (lobbiesTable.childElementCount > 1)
 		lobbiesTable.removeChild(lobbiesTable.lastChild);
 
-	createLobbyButton.disabled = !!lobbyId;
 
 	for (const l of lobbies) {
 		const row = document.createElement("tr");
@@ -87,15 +103,20 @@ function renderNewLobbies(lobbies) {
 				});
 			}
 		};
-
-
 		joinLeaveTd.appendChild(joinLeaveButton);
 		row.appendChild(joinLeaveTd);
 
 		const startTd = document.createElement('td');
 		if (lobbyId == l.id) {
-			const startButton = document.createElement('button');
-			startTd.appendChild(startButton);
+			if (lobbyIsMine) {
+				const startButton = document.createElement('button');
+				startButton.innerText = "Start game";
+				startButton.disabled = l.players < 2;
+				startTd.appendChild(startButton);
+			}
+			else {
+				startTd.innerText = "Waiting for lobby creator to start...";
+			}
 		}
 		row.appendChild(startTd);
 

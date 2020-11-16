@@ -98,6 +98,7 @@ function refreshLobbiesForPlayer(session: Session) {
 		message: 'listLobbies',
 		success: true,
 		lobbyId: lobbyId,
+		lobbyIsMine: session.lobby?.creatorSession === session,
 		lobbies: l
 	}));
 }
