@@ -19,11 +19,8 @@ const opponentHandDiv = document.getElementById("opponentHandDiv ");
 var rules: GameRules;
 
 var gameSettings = {};
-var boardTd = [];
+var boardTd: HTMLElement[] = [];
 
-
-
-var board: HTMLElement[];
 
 (window as any).logOut = function () {
 	// TODO make this not suck and delete the cookie from the server
@@ -166,10 +163,10 @@ class ClientGame extends Game {
 			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
 
 		// Populate the board table
-		board = new Array(rules.boardWidth * rules.boardHeight);
-		for (var y = rules.boardHeight - 1; y >= 0; y--) {
+		boardTd = new Array(rules.boardWidth * rules.boardHeight);
+		for (let y = rules.boardHeight - 1; y >= 0; y--) {
 			const tr = document.createElement('tr');
-			for (var x = 0; x < rules.boardWidth; x++) {
+			for (let x = 0; x < rules.boardWidth; x++) {
 				const td = document.createElement('td');
 				td.setAttribute('data-x', x.toString());
 				td.setAttribute('data-y', y.toString());
@@ -180,6 +177,8 @@ class ClientGame extends Game {
 					td.classList.add('myfield');
 				else if (y >= rules.boardHeight - rules.ownHeight)
 					td.classList.add('opponentfield');
+				
+				td.onmouseup = () => { onDropOnGrid(x, y); };
 			}
 			gameBoard.appendChild(tr);
 		}
@@ -198,10 +197,29 @@ class ClientGame extends Game {
 	}
 }
 
+var draggedDivOffsetX = 0;
+var draggedDivOffsetY = 0;
+var draggedDiv: HTMLDivElement = null;
+
+function onMouseMove(event: MouseEvent) {
+	if (draggedDiv) {
+		draggedDiv.style.top = (event.clientY + draggedDivOffsetY) + 'px';
+		draggedDiv.style.left = (event.clientX + draggedDivOffsetX) + 'px';
+	}
+}
+
+function onDropOnGrid(x, y) {
+	console.log(x,y);
+	if (draggedDiv) {
+		draggedDiv.classList.remove('dragged');
+		boardTd[y * rules.boardWidth + x].appendChild(draggedDiv);
+		draggedDiv = null;
+	}
+}
+
 function makeCardDiv(card: Card): HTMLDivElement {
 	const cardDiv = document.createElement('div');
 	cardDiv.classList.add('card', card.owner == game.p1 ? 'mycard' : 'opponentcard' );
-
 
 	const text = document.createElement('p');
 	text.classList.add('text');
@@ -211,8 +229,25 @@ function makeCardDiv(card: Card): HTMLDivElement {
 	strength.innerText = card.strength.toString();
 	strength.classList.add('strength');
 
+	cardDiv.setAttribute('data-id', card.id.toString());
+
+	cardDiv.onmousedown = event => {
+		if (!draggedDiv) {
+			draggedDiv = cardDiv;
+			draggedDivOffsetX = draggedDiv.getBoundingClientRect().left - event.clientX;
+			draggedDivOffsetY = draggedDiv.getBoundingClientRect().top - event.clientY + window.scrollY;
+
+			cardDiv.classList.add('dragged');
+			document.body.appendChild(cardDiv);
+			document.body.onmousemove = onMouseMove;
+			onMouseMove(event);
+			
+			
+			console.log(draggedDivOffsetX, draggedDivOffsetY);
+		}
+	};
+
 	cardDiv.appendChild(text);
 	cardDiv.appendChild(strength);
 	return cardDiv;
 }
-
