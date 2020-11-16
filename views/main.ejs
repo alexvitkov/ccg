@@ -1,6 +1,13 @@
 <script>
 	var lobbyId = "<%= lobbyId %>";
 </script>
+
+
+<div class="card">
+	<p class="text">BOMB</p>
+	<p class="strength">15</p>
+</div>
+
 <div id="lobbies">
 	<button id="createLobbyButton" onclick="createLobby()"<%=inLobby ? ' disabled' : ''%>>Create a lobby</button>
 	<button onclick="refreshLobbies()">Refresh lobbies</button>
