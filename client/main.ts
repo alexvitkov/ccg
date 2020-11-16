@@ -1,9 +1,9 @@
-import { Card, Player, Game, GameRules, CardProto } from './game_common';
-var ws: WebSocket;
+import { Card, Player, Game, GameRules, CardProto } from '../game_common';
+import { Message, GameStartedMessage, ListLobbiesResponse } from '../messages';
 
+var ws: WebSocket;
 var game: ClientGame;
 
-var lobbyId = 0;
 var lobbyIsMine = false;
 var createLobbyButton: HTMLButtonElement = <any>document.getElementById('createLobbyButton');
 
@@ -46,9 +46,8 @@ function wsConnect(callback) {
 
 		switch (msg.message) {
 			case 'listLobbies': {
-				lobbyId = msg.lobbyId;
 				lobbyIsMine = msg.lobbyIsMine;
-				renderNewLobbies(msg.lobbies);
+				renderNewLobbies(msg);
 				break;
 			}
 			case 'gameStarted': {
@@ -78,10 +77,10 @@ function send(message: {message: string; [_: string]: any}) {
 	});
 };
 
-function renderNewLobbies(lobbies) {
-	createLobbyButton.disabled = !!lobbyId;
+function renderNewLobbies(resp: ListLobbiesResponse) {
+	createLobbyButton.disabled = !!resp.lobbyId;
 
-	if (lobbies.length == 0) {
+	if (resp.lobbies.length == 0) {
 		lobbiesTable.style.display = 'none';
 		noLobbies.style.display = 'block';
 		return;
@@ -95,7 +94,7 @@ function renderNewLobbies(lobbies) {
 		lobbiesTable.removeChild(lobbiesTable.lastChild);
 
 
-	for (const l of lobbies) {
+	for (const l of resp.lobbies) {
 		const row = document.createElement("tr");
 
 		const name = document.createElement("td");
@@ -108,10 +107,10 @@ function renderNewLobbies(lobbies) {
 
 		const joinLeaveTd = document.createElement("td");
 		const joinLeaveButton = document.createElement("button");
-		joinLeaveButton.innerText = l.id == lobbyId ? "Leave": "Join";
+		joinLeaveButton.innerText = l.id == resp.lobbyId ? "Leave": "Join";
 
 		joinLeaveButton.onclick = _ => {
-			if (lobbyId == l.id) {
+			if (resp.lobbyId == l.id) {
 				send({
 					message: "leaveLobby",
 					lobby: l.id,
@@ -128,7 +127,7 @@ function renderNewLobbies(lobbies) {
 		row.appendChild(joinLeaveTd);
 
 		const startTd = document.createElement('td');
-		if (lobbyId == l.id) {
+		if (resp.lobbyId == l.id) {
 			if (lobbyIsMine) {
 				const startButton = document.createElement('button');
 				startButton.innerText = "Start game";
@@ -154,7 +153,7 @@ wsConnect(() => {
 });
 
 class ClientGame extends Game {
-	constructor(message) {
+	constructor(message: GameStartedMessage) {
 		super(message.rules, new Player(), new Player());
 		game = this;
 		rules = message.rules;
@@ -162,7 +161,6 @@ class ClientGame extends Game {
 		lobbies.style.display = 'none';
 		gameDiv.style.display = 'block';
 		console.log(gameSettings);
-
 
 		this.p1.hand = message.hand.map(
 			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));

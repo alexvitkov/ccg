@@ -1,5 +1,7 @@
 import { Session } from './session';
-import { Card, CardProto, GameRules, Game, Player } from './game_common';
+import { Card, CardProto, GameRules, Game, Player } from '../game_common';
+import { GameStartedMessage } from '../messages';
+import { Message } from '../messages';
 
 export const ruleset: GameRules = {
 	boardWidth: 7,
@@ -39,18 +41,20 @@ export class ServerGame extends Game {
 		this.p1.hand = hand.map(id => this.instantiate(this.p1, this.rules.cardSet[id]));
 		this.p2.hand = hand.map(id => this.instantiate(this.p2, this.rules.cardSet[id]));
 
-		session1.send({
+		const msg1: GameStartedMessage = {
 			message: 'gameStarted',
 			rules: this.rules,
 			hand: this.p1.hand.map(c => [c.id, c.proto.cardID]),
 			opponentHandSize: this.p2.hand.length
-		});
-		session2.send({
+		};
+		const msg2: GameStartedMessage = {
 			message: 'gameStarted',
 			rules: this.rules,
 			hand: this.p2.hand.map(c => [c.id, c.proto.cardID]),
-				opponentHandSize: this.p1.hand.length,
-		});
+			opponentHandSize: this.p1.hand.length
+		};
+		session1.send(msg1);
+		session2.send(msg2);
 	}
 
 	instantiate(owner: Player, proto: CardProto) {
@@ -63,7 +67,7 @@ export class ServerGame extends Game {
 		return card;
 	}
 
-	handleGameWsMessage(session: Session, message: {[key:string]:any}) {
+	handleGameWsMessage(session: Session, message: Message) {
 		return false;
 	}
 }

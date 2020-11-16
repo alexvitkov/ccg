@@ -2,7 +2,10 @@ import crypto from 'crypto';
 import { Session } from './session';
 import { ruleset, ServerGame } from './game';
 
+import { ListLobbiesResponse } from '../messages';
+
 const lobbies2: {[lobbyId: string]: Lobby} = {};
+
 
 export class Lobby {
 	id: string;
@@ -74,6 +77,7 @@ export function handleLobbyWsMessage(session: Session, message: {[key:string]:an
 				session.lobby = lobby;
 			}
 			refreshLobbiesForPlayer(session);
+
 			// TODO creatorSession is sometimes lost?? crash here
 			refreshLobbiesForPlayer(lobby.creatorSession); 
 			break;
@@ -106,14 +110,13 @@ function refreshLobbiesForPlayer(session: Session) {
 		players: lobby.otherPlayer ? 2 : 1,
 		gameStarted: lobby.gameStarted
 	}});
-	// console.log(session);
 	const lobbyId = (session.lobby?.id);
-	session.send({
+
+	const msg: ListLobbiesResponse = {
 		message: 'listLobbies',
-		success: true,
 		lobbyId: lobbyId,
 		lobbyIsMine: session.lobby?.creatorSession === session,
 		lobbies: l
-	});
+	};
+	session.send(msg);
 }
-
