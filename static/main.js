@@ -4,6 +4,16 @@ var lobbyId = 0;
 var lobbyIsMine = false;
 var createLobbyButton = document.getElementById('createLobbyButton');
 
+const lobbies = document.getElementById("lobbies");
+const lobbiesTable = document.getElementById("lobbiesTable");
+const noLobbies = document.getElementById("noLobbies");
+
+const game = document.getElementById("game");
+const gameBoard = document.getElementById("gameBoard");
+
+var gameSettings = {};
+var boardTd = [];
+
 function logOut() {
 	// TODO make this not suck and delete the cookie from the server
 	document.cookie="session=;SameSite=Strict;expires = Thu, 01 Jan 1970 00:00:00 GMT";
@@ -28,6 +38,11 @@ function wsConnect(callback) {
 				lobbyId = msg.lobbyId;
 				lobbyIsMine = msg.lobbyIsMine;
 				renderNewLobbies(msg.lobbies);
+				break;
+			}
+			case 'gameStarted': {
+				gameSettings = msg;
+				startGame();
 				break;
 			}
 		}
@@ -55,8 +70,6 @@ function createLobby() {
 
 function renderNewLobbies(lobbies) {
 
-	const lobbiesTable = document.getElementById("lobbiesTable");
-	const noLobbies = document.getElementById("noLobbies");
 
 	createLobbyButton.disabled = !!lobbyId;
 
@@ -113,6 +126,10 @@ function renderNewLobbies(lobbies) {
 				startButton.innerText = "Start game";
 				startButton.disabled = l.players < 2;
 				startTd.appendChild(startButton);
+
+				startButton.onclick = _ => {
+					send({ message: "startGame" });
+				};
 			}
 			else {
 				startTd.innerText = "Waiting for lobby creator to start...";
@@ -128,3 +145,26 @@ wsConnect(() => {
 	refreshLobbies();
 });
 
+function startGame() {
+	lobbies.style.display = 'none';
+	game.style.display = 'block';
+
+	board = new Array(gameSettings.boardWidth * gameSettings.boardHeight);
+	
+	for (var y = gameSettings.boardHeight - 1; y >= 0; y--) {
+		const tr = document.createElement('tr');
+		for (var x = 0; x < gameSettings.boardWidth; x++) {
+			const td = document.createElement('td');
+			td.setAttribute('data-x', x);
+			td.setAttribute('data-y', y);
+			boardTd[y * game.boardWidth + x] = td;
+			tr.appendChild(td);
+
+			if (y < gameSettings.ownHeight)
+				td.classList = 'myfield';
+			else if (y >= gameSettings.boardHeight - gameSettings.ownHeight)
+				td.classList = 'opponentfield';
+		}
+		gameBoard.appendChild(tr);
+	}
+}

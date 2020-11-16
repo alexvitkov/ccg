@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "faststart": "node ./dist/index.js",
     "start": "node --enable-source-maps ./dist/index.js",
     "build": "make"
   },

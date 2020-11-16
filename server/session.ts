@@ -12,7 +12,7 @@ export class Session {
 		this.userId = userInDb.id.toString('base64');
 		this.username = userInDb.username;
 	}
-	send(msg) {
-		if (this.sock) { this.sock.send(msg); }
+	send(msg: {message: string; [_: string]: any;}) {
+		if (this.sock) { this.sock.send(JSON.stringify(msg)); }
 	}
 }

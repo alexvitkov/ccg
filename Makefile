@@ -13,7 +13,7 @@ dist/index.js: dist server/*
 		server/index.ts
 
 dist/static: static/*
-	cp -r static dist/static
+	cp -r static dist
 
 clean: 
 	rm -rf dist

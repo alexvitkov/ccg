@@ -6,7 +6,7 @@ import cookie from 'cookie';
 import crypto from 'crypto';
 import ws from 'ws';
 
-import { Lobby, handleLobbyWsMessage } from './lobby';
+import { handleLobbyWsMessage } from './lobby';
 import { Session } from './session';
 
 const mongoDbUri = process.env.MONGOURI || "mongodb://127.0.0.1:27017/?poolSize=20&w=majority";
@@ -24,9 +24,7 @@ expressApp.use(bodyParser.urlencoded({ extended: true }));
 expressApp.use(bodyParser.json({ limit: 1024 }));
 expressApp.use(cookieParser());
 
-
-// const activeSessions: {[session: string]: Session } = {};
-const activeSessions2: {[userId: string]: Session } = {};
+const activeSessions: {[userId: string]: Session } = {};
 
 async function runMongo() {
 	await mongoClient.connect();
@@ -43,8 +41,8 @@ async function getSessionByCookie(cookie: string): Promise<Session> {
 	const userId: Buffer = sessionFromDb.userId;
 	const userId64 = userId.toString('base64');
 
-	if (userId64 in activeSessions2) {
-		return activeSessions2[userId64];
+	if (userId64 in activeSessions) {
+		return activeSessions[userId64];
 	}
 	else {
 		const user = await users.findOne({id: userId});
@@ -52,9 +50,9 @@ async function getSessionByCookie(cookie: string): Promise<Session> {
 			return null;
 		}
 		else {
-			console.log("genSessionByCookie: creating session for " + user.username);
-			activeSessions2[userId64] = new Session(user)
-			return activeSessions2[userId64];
+			//console.log("genSessionByCookie: creating session for " + user.username);
+			activeSessions[userId64] = new Session(user)
+			return activeSessions[userId64];
 		}
 	}
 }
@@ -106,7 +104,7 @@ function runExpress() {
 
 
 function handleWsMessage(session: Session, message: {[key:string]:any}) {
-	console.log(`WS[${session.username}]: `, message);
+	// console.log(`WS[${session.username}]: `, message);
 	if (handleLobbyWsMessage(session, message)) {
 		return true;
 	}
@@ -157,8 +155,8 @@ async function createSession(userId: Buffer, password: string) {
 		{ $push: { sessions: sessionCookie } }
 	);
 	sessionsColl.insertOne({cookie: sessionCookie, userId: userId});
-	console.log("createSession: creating session for " + user.username);
-		activeSessions2[userId.toString('base64')] = new Session(user);
+	//console.log("createSession: creating session for " + user.username);
+	activeSessions[userId.toString('base64')] = new Session(user);
 	return sessionCookie;
 }
 
@@ -177,12 +175,12 @@ expressApp.get('/', async (req, res) => {
 			const userId64 = userId.toString('base64');
 			const user = await users.findOne({id: userId});
 
-			if (!(userId64 in activeSessions2)) {
-				console.log("get(/): creating session for " + user.username);
-				activeSessions2[userId64] = new Session(user);
+			if (!(userId64 in activeSessions)) {
+				//console.log("get(/): creating session for " + user.username);
+				activeSessions[userId64] = new Session(user);
 			}
 
-			const session = activeSessions2[userId64];
+			const session = activeSessions[userId64];
 
 			res.render('index', {
 				loggedIn: true,
@@ -257,4 +255,3 @@ expressApp.get('/usernameTaken', async (req: express.Request, res: express.Respo
 
 runExpress();
 runMongo();
-

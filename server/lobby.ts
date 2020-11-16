@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { Session } from './session';
-
+import { Game } from './game';
 
 const lobbies2: {[lobbyId: string]: Lobby} = {};
 
@@ -9,12 +9,16 @@ export class Lobby {
 	name: string;
 	creatorSession: Session;
 	otherPlayer: Session;
-	gameStarted: boolean;
+	game: Game;
+
+	get gameStarted(): boolean {
+		return !!this.game;
+	}
 
 	constructor(creatorSession: Session) {
 		this.creatorSession = creatorSession;
 		this.name = creatorSession.username + "'s lobby";
-		this.gameStarted = false;
+		this.game = null;
 
 		do {
 			this.id = crypto.randomBytes(8).toString('base64');
@@ -26,7 +30,7 @@ export class Lobby {
 
 
 function leaveLobby(session: Session) {
-	if (session.lobby) {
+	if (session.lobby && !session.lobby.gameStarted) {
 		const lobby = session.lobby;
 
 		if (lobby.creatorSession === session) {
@@ -41,8 +45,8 @@ function leaveLobby(session: Session) {
 			lobby.otherPlayer = null;
 			refreshLobbiesForPlayer(lobby.creatorSession);
 		}
+		session.lobby = null;
 	}
-	session.lobby = null;
 	refreshLobbiesForPlayer(session);
 }
 
@@ -70,7 +74,8 @@ export function handleLobbyWsMessage(session: Session, message: {[key:string]:an
 				session.lobby = lobby;
 			}
 			refreshLobbiesForPlayer(session);
-			refreshLobbiesForPlayer(lobby.creatorSession);
+			// TODO creatorSession is sometimes lost?? crash here
+			refreshLobbiesForPlayer(lobby.creatorSession); 
 			break;
 		}
 
@@ -79,8 +84,16 @@ export function handleLobbyWsMessage(session: Session, message: {[key:string]:an
 			break;
 		}
 
+		case 'startGame': {
+			if (session.lobby && session.lobby.creatorSession == session && session.lobby.otherPlayer) {
+				this.game = new Game(7, 6, 3, session, session.lobby.otherPlayer, 3);
+				break;
+			}
+		}
+
 		default: {
-			return false;
+			if (this.gameStarted)
+				return this.game.handleGameWsMessage(session, message);
 		}
 	}
 	return true;
@@ -90,16 +103,17 @@ function refreshLobbiesForPlayer(session: Session) {
 	const l = Object.values(lobbies2).map(lobby => { return {
 		id: lobby.id,
 		name: lobby.name,
-		players: lobby.otherPlayer ? 2 : 1
+		players: lobby.otherPlayer ? 2 : 1,
+		gameStarted: lobby.gameStarted
 	}});
 	// console.log(session);
 	const lobbyId = (session.lobby?.id);
-	session.send(JSON.stringify({
+	session.send({
 		message: 'listLobbies',
 		success: true,
 		lobbyId: lobbyId,
 		lobbyIsMine: session.lobby?.creatorSession === session,
 		lobbies: l
-	}));
+	});
 }
 
