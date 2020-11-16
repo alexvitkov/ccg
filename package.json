@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "faststart": "node ./dist/index.js",
-    "start": "node --enable-source-maps ./dist/index.js",
+    "faststart": "cd dist && node index.js",
+    "start": "cd dist && node --enable-source-maps index.js",
     "build": "make"
   },
   "keywords": [],

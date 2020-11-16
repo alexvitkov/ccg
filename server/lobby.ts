@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { Session } from './session';
-import { Game } from './game';
+import { ruleset, ServerGame } from './game';
 
 const lobbies2: {[lobbyId: string]: Lobby} = {};
 
@@ -9,7 +9,7 @@ export class Lobby {
 	name: string;
 	creatorSession: Session;
 	otherPlayer: Session;
-	game: Game;
+	game: ServerGame;
 
 	get gameStarted(): boolean {
 		return !!this.game;
@@ -86,7 +86,7 @@ export function handleLobbyWsMessage(session: Session, message: {[key:string]:an
 
 		case 'startGame': {
 			if (session.lobby && session.lobby.creatorSession == session && session.lobby.otherPlayer) {
-				this.game = new Game(7, 6, 3, session, session.lobby.otherPlayer, 3);
+				this.game = new ServerGame(ruleset, session.lobby.creatorSession, session.lobby.otherPlayer);
 				break;
 			}
 		}

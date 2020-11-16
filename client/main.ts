@@ -1,23 +1,34 @@
-var ws;
+import { Card, Player, Game, GameRules, CardProto } from './game_common';
+var ws: WebSocket;
+
+var game: ClientGame;
 
 var lobbyId = 0;
 var lobbyIsMine = false;
-var createLobbyButton = document.getElementById('createLobbyButton');
+var createLobbyButton: HTMLButtonElement = <any>document.getElementById('createLobbyButton');
 
 const lobbies = document.getElementById("lobbies");
 const lobbiesTable = document.getElementById("lobbiesTable");
 const noLobbies = document.getElementById("noLobbies");
 
-const game = document.getElementById("game");
+const gameDiv = document.getElementById("game");
 const gameBoard = document.getElementById("gameBoard");
+const myHandDiv = document.getElementById("myHand");
+const opponentHandDiv = document.getElementById("opponentHandDiv ");
+
+var rules: GameRules;
 
 var gameSettings = {};
 var boardTd = [];
 
-function logOut() {
+
+
+var board: HTMLElement[];
+
+(window as any).logOut = function () {
 	// TODO make this not suck and delete the cookie from the server
 	document.cookie="session=;SameSite=Strict;expires = Thu, 01 Jan 1970 00:00:00 GMT";
-	window.location='/';
+	window.location.assign('/');
 }
 
 function wsConnect(callback) {
@@ -41,8 +52,7 @@ function wsConnect(callback) {
 				break;
 			}
 			case 'gameStarted': {
-				gameSettings = msg;
-				startGame();
+				game = new ClientGame(msg);
 				break;
 			}
 		}
@@ -52,25 +62,23 @@ function wsConnect(callback) {
 	});
 }
 
-function send(message) {
+function send(message: {message: string; [_: string]: any}) {
 	ws.send(JSON.stringify(message));
 }
 
-function refreshLobbies() {
+(window as any).refreshLobbies = function () {
 	send({
 		message: 'listLobbies'
 	});
-}
+};
 
-function createLobby() {
+(window as any).createLobby = function () {
 	send({
 		message: 'createLobby'
 	});
-}
+};
 
 function renderNewLobbies(lobbies) {
-
-
 	createLobbyButton.disabled = !!lobbyId;
 
 	if (lobbies.length == 0) {
@@ -142,29 +150,71 @@ function renderNewLobbies(lobbies) {
 }
 
 wsConnect(() => {
-	refreshLobbies();
+	(window as any).refreshLobbies();
 });
 
-function startGame() {
-	lobbies.style.display = 'none';
-	game.style.display = 'block';
+class ClientGame extends Game {
+	constructor(message) {
+		super(message.rules, new Player(), new Player());
+		game = this;
+		rules = message.rules;
 
-	board = new Array(gameSettings.boardWidth * gameSettings.boardHeight);
-	
-	for (var y = gameSettings.boardHeight - 1; y >= 0; y--) {
-		const tr = document.createElement('tr');
-		for (var x = 0; x < gameSettings.boardWidth; x++) {
-			const td = document.createElement('td');
-			td.setAttribute('data-x', x);
-			td.setAttribute('data-y', y);
-			boardTd[y * game.boardWidth + x] = td;
-			tr.appendChild(td);
+		lobbies.style.display = 'none';
+		gameDiv.style.display = 'block';
+		console.log(gameSettings);
 
-			if (y < gameSettings.ownHeight)
-				td.classList = 'myfield';
-			else if (y >= gameSettings.boardHeight - gameSettings.ownHeight)
-				td.classList = 'opponentfield';
+
+		this.p1.hand = message.hand.map(
+			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
+
+		// Populate the board table
+		board = new Array(rules.boardWidth * rules.boardHeight);
+		for (var y = rules.boardHeight - 1; y >= 0; y--) {
+			const tr = document.createElement('tr');
+			for (var x = 0; x < rules.boardWidth; x++) {
+				const td = document.createElement('td');
+				td.setAttribute('data-x', x.toString());
+				td.setAttribute('data-y', y.toString());
+				boardTd[y * rules.boardWidth + x] = td;
+				tr.appendChild(td);
+
+				if (y < rules.ownHeight)
+					td.classList.add('myfield');
+				else if (y >= rules.boardHeight - rules.ownHeight)
+					td.classList.add('opponentfield');
+			}
+			gameBoard.appendChild(tr);
 		}
-		gameBoard.appendChild(tr);
+
+		// Populate the hand
+		for (const c of this.p1.hand) {
+			const cardDiv = makeCardDiv(c);
+			myHandDiv.appendChild(cardDiv);
+		}
+	}
+
+	instantiate(id: number, owner: Player, proto: CardProto) {
+		const card = new Card(id, owner, proto);
+		this.cards[id] = card;
+		return card;
 	}
 }
+
+function makeCardDiv(card: Card): HTMLDivElement {
+	const cardDiv = document.createElement('div');
+	cardDiv.classList.add('card', card.owner == game.p1 ? 'mycard' : 'opponentcard' );
+
+
+	const text = document.createElement('p');
+	text.classList.add('text');
+	const strength = document.createElement('p');
+
+	text.innerText = card.proto.cardLetter;
+	strength.innerText = card.strength.toString();
+	strength.classList.add('strength');
+
+	cardDiv.appendChild(text);
+	cardDiv.appendChild(strength);
+	return cardDiv;
+}
+

@@ -1,54 +1,69 @@
 import { Session } from './session';
+import { Card, CardProto, GameRules, Game, Player } from './game_common';
 
-class Card {
-	cardID: number;
-	cardName: string;
-	baseStrength: number;
-
-	cardLetter: string;
-	cardColor: string;
+export const ruleset: GameRules = {
+	boardWidth: 7,
+	boardHeight: 6,
+	ownHeight: 3,
+	startingHandSize: 10,
+	blindStageUnits: 3,
+	cardSet: [
+		new CardProto(0, 'Bomber', 4, 'BOMB'),
+		new CardProto(1, 'Healer', 3, 'HEAL'),
+		new CardProto(2, 'Gunner', 3, 'GUN'),
+	],
+	minDeckSize: 20,
+	maxDeckSize: 30,
 }
 
-class PlayerState {
-	hand: Card[];
+class ServerPlayer extends Player {
+	session: Session;
+
+	constructor(session: Session) {
+		super();
+		this.session = session;
+	}
+
+	send(msg: {[_: string]: any; message: string;}) {
+		this.session.send(msg);
+	}
 }
 
-export class Game {
-	boardWidth: number;
-	boardHeight: number;
-	blindStageUnits: number;
-	ownHeight: number;
+export class ServerGame extends Game {
 
-	player1: Session;
-	player2: Session;
+	constructor(rules: GameRules, session1: Session, session2: Session) {
 
-	ps1: PlayerState;
-	ps2: PlayerState;
+		super(rules, new ServerPlayer(session1), new ServerPlayer(session2));
 
-	constructor(boardWidth: number, boardHeight: number, ownHeight: number, player1: Session, player2: Session, blindStageUnits: number) {
-		this.boardWidth = boardWidth;
-		this.boardHeight = boardHeight;
-		this.blindStageUnits = blindStageUnits;
-		this.ownHeight = ownHeight;	
+		const hand = [0,0,0,1,1,1,2,2,2];
+		this.p1.hand = hand.map(id => this.instantiate(this.p1, this.rules.cardSet[id]));
+		this.p2.hand = hand.map(id => this.instantiate(this.p2, this.rules.cardSet[id]));
 
-		player1.send({
+		session1.send({
 			message: 'gameStarted',
-			boardWidth: this.boardWidth,
-			boardHeight: this.boardHeight,
-			ownHeight: this.ownHeight,
-			blindStageUnits: this.blindStageUnits,
+			rules: this.rules,
+			hand: this.p1.hand.map(c => [c.id, c.proto.cardID]),
+			opponentHandSize: this.p2.hand.length
 		});
-		player2.send({
+		session2.send({
 			message: 'gameStarted',
-			boardWidth: this.boardWidth,
-			boardHeight: this.boardHeight,
-			ownHeight: this.ownHeight,
-			blindStageUnits: this.blindStageUnits,
+			rules: this.rules,
+			hand: this.p2.hand.map(c => [c.id, c.proto.cardID]),
+				opponentHandSize: this.p1.hand.length,
 		});
+	}
+
+	instantiate(owner: Player, proto: CardProto) {
+		var id: number;
+		do { 
+			id = Math.floor(Math.random() * 1_000_000);
+		} while (id in this.cards);
+		const card = new Card(id, owner, proto);
+		this.cards[id] = card;
+		return card;
 	}
 
 	handleGameWsMessage(session: Session, message: {[key:string]:any}) {
 		return false;
 	}
 }
-
