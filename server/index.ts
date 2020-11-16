@@ -158,7 +158,7 @@ async function createSession(userId: Buffer, password: string) {
 	);
 	sessionsColl.insertOne({cookie: sessionCookie, userId: userId});
 	console.log("createSession: creating session for " + user.username);
-	activeSessions2[userId.toString('base64')] = new Session(user);
+		activeSessions2[userId.toString('base64')] = new Session(user);
 	return sessionCookie;
 }
 

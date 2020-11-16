@@ -9,10 +9,12 @@ export class Lobby {
 	name: string;
 	creatorSession: Session;
 	otherPlayer: Session;
+	gameStarted: boolean;
 
 	constructor(creatorSession: Session) {
 		this.creatorSession = creatorSession;
 		this.name = creatorSession.username + "'s lobby";
+		this.gameStarted = false;
 
 		do {
 			this.id = crypto.randomBytes(8).toString('base64');

@@ -69,7 +69,7 @@ function renderNewLobbies(lobbies) {
 		state.innerText = `Players ${l.players}/2`;
 		row.appendChild(state);
 
-		const joinTd = document.createElement("td");
+		const joinLeaveTd = document.createElement("td");
 		const joinLeaveButton = document.createElement("button");
 		joinLeaveButton.innerText = l.id == lobbyId ? "Leave": "Join";
 
@@ -88,8 +88,16 @@ function renderNewLobbies(lobbies) {
 			}
 		};
 
-		joinTd.appendChild(joinLeaveButton);
-		row.appendChild(joinTd);
+
+		joinLeaveTd.appendChild(joinLeaveButton);
+		row.appendChild(joinLeaveTd);
+
+		const startTd = document.createElement('td');
+		if (lobbyId == l.id) {
+			const startButton = document.createElement('button');
+			startTd.appendChild(startButton);
+		}
+		row.appendChild(startTd);
 
 		lobbiesTable.appendChild(row);
 	}

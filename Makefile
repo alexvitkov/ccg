@@ -12,7 +12,7 @@ dist/index.js: dist server/*
 		--target=es2017 \
 		server/index.ts
 
-dist/static: static
+dist/static: static/*
 	cp -r static dist/static
 
 clean: 
