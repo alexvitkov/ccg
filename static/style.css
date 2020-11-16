@@ -161,3 +161,8 @@ table, tr, td {
 	border: 1px solid white;
 }
 
+fieldset {
+	margin: 0;
+	padding: 0;
+	border: none;
+}

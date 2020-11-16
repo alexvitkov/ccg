@@ -5,22 +5,26 @@
 	</div>
 	<div id="lrforms">
 		<form id="loginForm" onsubmit="return login()">
-			<label>Username</label>
-			<input id="loginUsername" type="text">
-			<label>Password</label>
-			<input id="loginPassword" type="password">
-			<input type="submit" value="Log in">
+			<fieldset>
+				<label>Username</label>
+				<input id="loginUsername" type="text">
+				<label>Password</label>
+				<input id="loginPassword" type="password">
+				<input type="submit" value="Log in">
+			</fieldset>
 		</form>
 
 		<form id="registerForm" style="visibility: hidden;" onsubmit="return register()">
-			<label>Username</label>
-			<input id="registerUsername" oninput="regUsernameChange()" type="text">
-			<label>Password</label>
-			<input id="registerPassword" oninput="regPasswordChange()" type="password">
-			<label>Repeat Password</label>
-			<input id="registerPassword2" oninput="regPasswordChange()" type="password">
-			<input type="submit" id="registerButton" value="Create Account">
-		</div>
+			<fieldset disabled="disabled">
+				<label>Username</label>
+				<input id="registerUsername" oninput="regUsernameChange()" type="text">
+				<label>Password</label>
+				<input id="registerPassword" oninput="regPasswordChange()" type="password">
+				<label>Repeat Password</label>
+				<input id="registerPassword2" oninput="regPasswordChange()" type="password">
+				<input type="submit" id="registerButton" value="Create Account">
+			</fieldset>
+		</form>
 	</div>
 </div>
 <p id="inputErr" style="font-size: 1.5rem; font-weight: bold;"></p>
