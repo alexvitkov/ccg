@@ -1,15 +1,17 @@
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
 import { Message, GameStartedMessage, ListLobbiesResponse } from '../messages';
 
+var game: ClientGame;
+var ws: WebSocket;
+
 // DRAGGING
 var draggedCardPosInHand: number;
 var draggedCardPlaceholder: HTMLDivElement;
 var draggedDiv: HTMLDivElement = null;
+var draggedCard: Card = null;
 var draggedDivOffsetX: number = 0;
 var draggedDivOffsetY: number = 0;
-
-var ws: WebSocket;
-var game: ClientGame;
+var handPlaceholders: {[cardId: number]: HTMLDivElement} = {};
 
 var lobbyIsMine = false;
 var createLobbyButton: HTMLButtonElement = <any>document.getElementById('createLobbyButton');
@@ -24,7 +26,6 @@ const opponentHandDiv = document.getElementById("opponentHandDiv ");
 
 var rules: GameRules;
 
-var gameSettings = {};
 var boardTd: HTMLElement[] = [];
 
 
@@ -166,7 +167,6 @@ class ClientGame extends Game {
 		lobbies.style.display = 'none';
 		gameDiv.style.display = 'grid';
 		(document.getElementById('header') as any).style.display = 'none';
-		console.log(gameSettings);
 
 		this.p1.hand = message.hand.map(
 			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
@@ -200,7 +200,6 @@ class ClientGame extends Game {
 			const cardDiv = makeCardDiv(c);
 			myHandDiv.appendChild(cardDiv);
 		}
-
 		update();
 	}
 
@@ -222,26 +221,47 @@ function onMouseMove(event: MouseEvent) {
 
 
 function update() {
-	if (game.p1.canPlayCard()) {
+	if (game.p1.canPlayCard())
 		myHandDiv.classList.add('canPlay');
-	}
-	else {
+	else
 		myHandDiv.classList.remove('canPlay');
-	}
+
+	if (game.p1.canMoveCard())
+		gameDiv.classList.add('canMove');
+	else 
+		gameDiv.classList.remove('canMove');
+
+	if (draggedDiv && ((draggedCard.x && game.p1.canReturnCard()) || isDraggedCardFromHand()))
+		myHandDiv.classList.add('canReturn');
+	else
+		myHandDiv.classList.remove('canReturn');
 }
 
 function dragCardDiv(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
-	if (card.owner !== game.p1 || !game.p1.canPlayCard() || draggedDiv)
+	// not valid if we're currently dragging a card
+	if (draggedDiv || card.owner !== game.p1)
 		return;
 
+	const posInHand = game.p1.hand.indexOf(card);
+	if (posInHand !== -1 && !game.p1.canPlayCard())
+		return false;
+
+	if (card.onBoard && !game.p1.canMoveCard)
+		return false;
+
 	draggedDiv = cardDiv;
+	draggedCard = card;
 	draggedDivOffsetX = draggedDiv.getBoundingClientRect().left - event.clientX;
 	draggedDivOffsetY = draggedDiv.getBoundingClientRect().top - event.clientY + window.scrollY;
-	draggedCardPosInHand = game.p1.hand.indexOf(card);
+	draggedCardPosInHand = posInHand;
 
 	draggedCardPlaceholder = document.createElement('div');
 	draggedCardPlaceholder.classList.add('placeholder');
+
+	if (isDraggedCardFromHand())
+		handPlaceholders[card.id] = draggedCardPlaceholder;
 	cardDiv.parentElement.insertBefore(draggedCardPlaceholder, cardDiv);
+	console.log(draggedCardPlaceholder);
 
 	gameDiv.classList.add('dragging');
 	cardDiv.classList.add('dragged');
@@ -249,32 +269,57 @@ function dragCardDiv(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 	document.body.appendChild(cardDiv);
 	document.body.onmousemove = onMouseMove;
 	onMouseMove(event);
+
+	update();
 }
 
-function stopDrag(returnToPlaceholder: bool) {
+function stopDrag(returnToPlaceholder: boolean) {
 	if (returnToPlaceholder) {
 		draggedCardPlaceholder.parentElement.insertBefore(draggedDiv, draggedCardPlaceholder);
-		draggedCardPlaceholder.parentElement.removeChild(draggedCardPlaceholder);
+		draggedCardPlaceholder.remove();
 	}
+	if (!isDraggedCardFromHand() && draggedCardPlaceholder) {
+		draggedCardPlaceholder.remove();
+	}
+
 	draggedDiv.classList.remove('dragged');
 	gameDiv.classList.remove('dragging');
 	draggedDiv.style.top = '';
 	draggedDiv.style.left = '';
 	draggedCardPlaceholder = null;
 	draggedDiv = null;
+	draggedCard = null;
+
+	update();
 }
 
+function isDraggedCardFromHand() {
+	return draggedCardPosInHand !== -1;
+}
 
-function onDropOnGrid(x, y) {
+function onDropOnGrid(x: number, y: number) {
 	if (draggedDiv) {
-		if (game.p1.playCard(draggedCardPosInHand, x, y)) {
-			boardTd[y * rules.boardWidth + x].appendChild(draggedDiv);
-			stopDrag(false);
-			update();
+		if (isDraggedCardFromHand()) {
+			if (game.p1.playCard(draggedCardPosInHand, x, y)) {
+				boardTd[game.xy(x, y)].appendChild(draggedDiv);
+				stopDrag(false);
+				update();
+			}
+			else {
+				stopDrag(true);
+			}
 		}
 		else {
-			stopDrag(true);
+			if (!game.p1.moveCard(draggedCard, x, y)) {
+				stopDrag(true);
+			}
+			else {
+				boardTd[game.xy(x, y)].appendChild(draggedDiv);
+				stopDrag(false);
+				update();
+			}
 		}
+
 	}
 }
 
@@ -283,6 +328,36 @@ gameDiv.onmouseup = e => {
 		stopDrag(true);
 	}
 };
+
+myHandDiv.onmouseup = e => {
+	if (draggedDiv) {
+		// currentlyDraggingCard is from hand, just return it
+		if (isDraggedCardFromHand()) {
+			stopDrag(true);
+		}
+		else if (game.p1.canReturnCard()) {
+			const placeholder = handPlaceholders[draggedCard.id];
+			console.log('placeholders: ', handPlaceholders);
+
+			var prevCardDiv: Element = placeholder;
+			do {
+				console.log('loop start', prevCardDiv);
+				prevCardDiv = prevCardDiv.previousElementSibling;
+				console.log('loop end', prevCardDiv);
+			} while (prevCardDiv && !prevCardDiv.getAttribute('data-id'));
+			const prevCard = game.cards[prevCardDiv.getAttribute('data-id')];
+
+			game.p1.returnCard(draggedCard, prevCard);
+
+			placeholder.parentElement.insertBefore(draggedDiv, placeholder);
+			placeholder.parentElement.removeChild(placeholder);
+
+			delete handPlaceholders[draggedCard.id];
+
+			stopDrag(false);
+		}
+	}
+}
 
 function makeCardDiv(card: Card): HTMLDivElement {
 	const cardDiv = document.createElement('div');

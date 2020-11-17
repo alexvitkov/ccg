@@ -278,9 +278,6 @@ fieldset {
 	background: var(--my-card-bg);
 }
 
-.card.draggable {
-	cursor: grab;
-}
 
 .card > .text {
 	position: relative;
@@ -312,6 +309,10 @@ fieldset {
 	pointer-events: none;
 }
 
+.card.draggable {
+	cursor: grab;
+}
+
 #game.dragging {
 	cursor: no-drop;
 }
@@ -322,7 +323,11 @@ fieldset {
 	cursor: grab;
 }
 
-#game.dragging > .myfield {
+#game.dragging > .myfield
+{
 	cursor: grabbing;
 }
-
+#myHand.canReturn
+{
+	cursor: grabbing;
+}

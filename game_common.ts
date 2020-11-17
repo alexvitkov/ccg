@@ -18,12 +18,20 @@ export class Card {
 	proto: CardProto;
 	owner: Player;
 	strength: number;
+	x: number;
+	y: number;
+
+	get onBoard() {
+		return this.x >= 0;
+	}
 
 	constructor(id: number, owner: Player, proto: CardProto) {
 		this.id = id;
 		this.proto = proto;
 		this.owner = owner;
 		this.strength = this.proto.baseStrength;
+		this.x = -1;
+		this.y = -1;
 	}
 }
 
@@ -49,6 +57,17 @@ export class Player {
 		return false;
 	}
 
+	canMoveCard() : boolean {
+		if (this.game.stage === 'BlindStage')
+			return true;
+		return false;
+	}
+
+	canReturnCard() : boolean {
+		return this.game.stage === 'BlindStage';
+	}
+
+	// Assuming canPlayCard === true
 	playCard(posInHand: number, x: number, y: number): boolean {
 		const card = this.hand[posInHand];
 		if (!card)
@@ -58,8 +77,44 @@ export class Player {
 			return false;
 
 		this.game.board[xy] = card;
+		card.x = x;
+		card.y = y;
 		this.hand.splice(posInHand, 1);
 		return true;
+	}
+
+	// Assuming canMoveCard === true
+	moveCard(card: Card, x: number, y: number): boolean {
+		if (card.owner !== this)
+			return false;
+		const xy = this.game.xy(x, y);
+		if (this.game.board[xy])
+			return false;
+
+		// make sure card is on board
+		if (card.x < 0)
+			return false;
+
+		console.log(this.game.board);
+
+		delete this.game.board[this.game.xy(card.x, card.y)];
+		console.log(this.game.board);
+		this.game.board[xy] = card;
+		card.x = x;
+		card.y = y;
+		return true;
+	}
+
+	// Assuming canReturnCard() === true
+	// previousCard = null to insert at start of hand
+	returnCard(card: Card, previousCard?: Card) {
+		const xy = this.game.xy(card.x, card.y);
+		delete this.game.board[xy];
+		card.x = -1;
+		card.y = -1;
+
+		const pcIndex = this.hand.indexOf(previousCard);
+		this.hand.splice(pcIndex + 1, 0, card);
 	}
 
 	get unitsCount() {
