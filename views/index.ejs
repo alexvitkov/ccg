@@ -21,11 +21,13 @@
 			<% } %>
 		</ul>
 
-		<% if (loggedIn) { %>
-		<%-    include('main') %>
-		<% } else { %>
-		<%-    include('landing') %>
-		<% } %>
+		<div id="page">
+			<% if (loggedIn) { %>
+			<%-    include('main') %>
+			<% } else { %>
+			<%-    include('landing') %>
+			<% } %>
+		</div>
 
 	</body>
 </html>

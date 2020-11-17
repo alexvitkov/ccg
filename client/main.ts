@@ -12,7 +12,6 @@ const lobbiesTable = document.getElementById("lobbiesTable");
 const noLobbies = document.getElementById("noLobbies");
 
 const gameDiv = document.getElementById("game");
-const gameBoard = document.getElementById("gameBoard");
 const myHandDiv = document.getElementById("myHand");
 const opponentHandDiv = document.getElementById("opponentHandDiv ");
 
@@ -156,22 +155,27 @@ class ClientGame extends Game {
 		rules = message.rules;
 
 		lobbies.style.display = 'none';
-		gameDiv.style.display = 'block';
+		gameDiv.style.display = 'grid';
+		(document.getElementById('header') as any).style.display = 'none';
 		console.log(gameSettings);
 
 		this.p1.hand = message.hand.map(
 			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
 
-		// Populate the board table
+		// Populate the board grid
+		var last = document.getElementById('game').firstChild;
+
 		boardTd = new Array(rules.boardWidth * rules.boardHeight);
 		for (let y = rules.boardHeight - 1; y >= 0; y--) {
-			const tr = document.createElement('tr');
 			for (let x = 0; x < rules.boardWidth; x++) {
-				const td = document.createElement('td');
+				const td = document.createElement('div');
 				td.setAttribute('data-x', x.toString());
 				td.setAttribute('data-y', y.toString());
 				boardTd[y * rules.boardWidth + x] = td;
-				tr.appendChild(td);
+				last.parentNode.insertBefore(td, last.nextSibling);
+				last = td;
+
+				td.classList.add('field');
 
 				if (y < rules.ownHeight)
 					td.classList.add('myfield');
@@ -180,7 +184,6 @@ class ClientGame extends Game {
 				
 				td.onmouseup = () => { onDropOnGrid(x, y); };
 			}
-			gameBoard.appendChild(tr);
 		}
 
 		// Populate the hand
@@ -213,6 +216,8 @@ function onDropOnGrid(x, y) {
 	if (draggedDiv) {
 		draggedDiv.classList.remove('dragged');
 		boardTd[y * rules.boardWidth + x].appendChild(draggedDiv);
+		draggedDiv.style.top = '';
+		draggedDiv.style.left = '';
 		draggedDiv = null;
 	}
 }

@@ -1,17 +1,33 @@
-:root {
+* {
+	user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+}
+
+body, html {
+	margin: 0;
+	height: 100%;
+	max-height: 100%;
 	font-size: 14pt;
 	--my-card: #47a9ff;
 	--my-card-bg: #90d3e8;
 }
 
-body, html {
-	margin: 0;
+:root {
+}
+
+#page {
+	display: flex;
+	flex-direction: column;
+	flex: 1 0 0;
 }
 
 body {
 	background: #241729;
 	color: white;
 	font-family: 'Noto Serif', serif;
+	display: flex;
+	flex-direction: column;
 }
 
 #header {
@@ -30,9 +46,6 @@ body {
 	flex: 0 0 0;
 	margin: 0 1.2rem;
 	white-space: nowrap;
-	-webkit-user-select: none; /* Safari */
-	-ms-user-select: none;     /* IE 10 and IE 11 */
-	user-select: none;
 }
 
 .clickable {
@@ -74,6 +87,12 @@ button,input {
 	box-sizing: border-box;
 	transition: background 0.5s, border-bottom 0.5s, color 0.5s;
 	margin: 0.2rem;
+}
+
+input[type=text], input[type=password] {
+	user-select: unset;
+	-webkit-user-select: unset;
+	-ms-user-select: unset;
 }
 
 input[type=text]:focus, input[type=password]:focus, button:hover, input[type=submit]:hover {
@@ -185,38 +204,63 @@ fieldset {
 	border: none;
 }
 
-#game, #gameBoard {
-	user-select: none;
-	-webkit-user-select: none;
-	-ms-user-select: none;
-	border: none;
-	border-collapse: separate;
+#game {
+	height: 100%;
+	display: grid;
+	flex-direction: column;
+	grid-template-columns: 3fr 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 3fr;
+	grid-template-rows: repeat(8, 12.5vh);
 }
 
-#game tr {
-	border: 0;
+#myHand {
+	grid-row: 8;
+}
+#opponentHand {
+	grid-row: 1;
 }
 
-#game td {
-	width: 100px;
-	height: 100px;
-	margin: 5px;
-	border: 0;
+#myHand, #opponentHand {
+	grid-column: 1 / span 9;
+	display: flex;
+	background: white;
+}
+
+.sidebar1 {
+	background: red;
+	grid-column: 1;
+	grid-row: 2 / span 6;
+}
+
+.sidebar2 {
+	background: red;
+	grid-column: 9;
+	grid-row: 2 / span 6;
+}
+
+.field {
+	margin: 0;
 	padding: 0;
+	border: 1px solid black;
+	position: relative;
+}
+
+.field > .card {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
 
 .myfield {
 	background: #539299;
-	border: 0;
-	text-align: center;
-}
-
-.myfield:hover {
-	background: #3ebcca;
 }
 
 .opponentfield {
 	background: #9f356a;
+}
+
+.myfield:hover {
+	background: #3ebcca;
 }
 
 .opponentfield:hover {
@@ -224,28 +268,32 @@ fieldset {
 }
 
 .card {
-	width: 68px;
-	height: 82px;
+	position: relative;
 	background: var(--my-card-bg);
-	border: 8px solid  var(--my-card);
-	-webkit-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
+	border: 0.4vh solid  var(--my-card);
+	width: 8vh;
+	height: 11vh;
 }
 
 .card > .text {
+	position: relative;
 	color: black;
 	text-align: center;
 	padding-top: 10px;
+	margin: 0;
+	top: 0;
+	left: 0;
 }
 
 .card > .strength {
-	position: relative;
+	top: 0;
+	left: 0;
+	margin: 0;
+	position: absolute;
 	width: 30px;
 	height: 30px;
 	text-align: center;
 	line-height: 30px;
-	bottom: 15px;
 	background: var(--my-card);
 	color: white;
 	font-weight: bold;
@@ -257,8 +305,3 @@ fieldset {
 	pointer-events: none;
 }
 
-#myHand, #opponentHand {
-	width: 100%;
-	display: flex;
-	gap: 10px;
-}
