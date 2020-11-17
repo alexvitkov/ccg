@@ -36,6 +36,8 @@ export class ServerGame extends Game {
 	constructor(rules: GameRules, session1: Session, session2: Session) {
 
 		super(rules, new ServerPlayer(session1), new ServerPlayer(session2));
+		this.p1.game = this;
+		this.p2.game = this;
 
 		const hand = [0,0,0,1,1,1,2,2,2];
 		this.p1.hand = hand.map(id => this.instantiate(this.p1, this.rules.cardSet[id]));

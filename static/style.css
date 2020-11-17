@@ -244,7 +244,7 @@ fieldset {
 	position: relative;
 }
 
-.field > .card {
+.field > .card, .field > .placeholder {
 	position: absolute;
 	top: 50%;
 	left: 50%;
@@ -267,12 +267,19 @@ fieldset {
 	background: #d72980;
 }
 
+.card, .placeholder {
+	width: 8vh;
+	height: 11vh;
+	border: 0.4vh solid  var(--my-card);
+}
+
 .card {
 	position: relative;
 	background: var(--my-card-bg);
-	border: 0.4vh solid  var(--my-card);
-	width: 8vh;
-	height: 11vh;
+}
+
+.card.draggable {
+	cursor: grab;
 }
 
 .card > .text {
@@ -303,5 +310,19 @@ fieldset {
 .card.dragged {
 	position: absolute;
 	pointer-events: none;
+}
+
+#game.dragging {
+	cursor: no-drop;
+}
+
+#myHand.canPlay > .card,
+#game.canMove > .field > .card 
+{
+	cursor: grab;
+}
+
+#game.dragging > .myfield {
+	cursor: grabbing;
 }
 

@@ -1,6 +1,13 @@
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
 import { Message, GameStartedMessage, ListLobbiesResponse } from '../messages';
 
+// DRAGGING
+var draggedCardPosInHand: number;
+var draggedCardPlaceholder: HTMLDivElement;
+var draggedDiv: HTMLDivElement = null;
+var draggedDivOffsetX: number = 0;
+var draggedDivOffsetY: number = 0;
+
 var ws: WebSocket;
 var game: ClientGame;
 
@@ -151,6 +158,8 @@ wsConnect(() => {
 class ClientGame extends Game {
 	constructor(message: GameStartedMessage) {
 		super(message.rules, new Player(), new Player());
+		this.p1.game = this;
+		this.p2.game = this;
 		game = this;
 		rules = message.rules;
 
@@ -191,6 +200,8 @@ class ClientGame extends Game {
 			const cardDiv = makeCardDiv(c);
 			myHandDiv.appendChild(cardDiv);
 		}
+
+		update();
 	}
 
 	instantiate(id: number, owner: Player, proto: CardProto) {
@@ -200,27 +211,78 @@ class ClientGame extends Game {
 	}
 }
 
-var draggedDivOffsetX = 0;
-var draggedDivOffsetY = 0;
-var draggedDiv: HTMLDivElement = null;
-
 function onMouseMove(event: MouseEvent) {
 	if (draggedDiv) {
+		const card = game.cards[parseInt(draggedDiv.getAttribute('data-id'))];
+		draggedCardPosInHand = game.p1.hand.indexOf(card);
 		draggedDiv.style.top = (event.clientY + draggedDivOffsetY) + 'px';
 		draggedDiv.style.left = (event.clientX + draggedDivOffsetX) + 'px';
 	}
 }
 
-function onDropOnGrid(x, y) {
-	console.log(x,y);
-	if (draggedDiv) {
-		draggedDiv.classList.remove('dragged');
-		boardTd[y * rules.boardWidth + x].appendChild(draggedDiv);
-		draggedDiv.style.top = '';
-		draggedDiv.style.left = '';
-		draggedDiv = null;
+
+function update() {
+	if (game.p1.canPlayCard()) {
+		myHandDiv.classList.add('canPlay');
+	}
+	else {
+		myHandDiv.classList.remove('canPlay');
 	}
 }
+
+function dragCardDiv(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
+	if (card.owner !== game.p1 || !game.p1.canPlayCard() || draggedDiv)
+		return;
+
+	draggedDiv = cardDiv;
+	draggedDivOffsetX = draggedDiv.getBoundingClientRect().left - event.clientX;
+	draggedDivOffsetY = draggedDiv.getBoundingClientRect().top - event.clientY + window.scrollY;
+	draggedCardPosInHand = game.p1.hand.indexOf(card);
+
+	draggedCardPlaceholder = document.createElement('div');
+	draggedCardPlaceholder.classList.add('placeholder');
+	cardDiv.parentElement.insertBefore(draggedCardPlaceholder, cardDiv);
+
+	gameDiv.classList.add('dragging');
+	cardDiv.classList.add('dragged');
+
+	document.body.appendChild(cardDiv);
+	document.body.onmousemove = onMouseMove;
+	onMouseMove(event);
+}
+
+function stopDrag(returnToPlaceholder: bool) {
+	if (returnToPlaceholder) {
+		draggedCardPlaceholder.parentElement.insertBefore(draggedDiv, draggedCardPlaceholder);
+		draggedCardPlaceholder.parentElement.removeChild(draggedCardPlaceholder);
+	}
+	draggedDiv.classList.remove('dragged');
+	gameDiv.classList.remove('dragging');
+	draggedDiv.style.top = '';
+	draggedDiv.style.left = '';
+	draggedCardPlaceholder = null;
+	draggedDiv = null;
+}
+
+
+function onDropOnGrid(x, y) {
+	if (draggedDiv) {
+		if (game.p1.playCard(draggedCardPosInHand, x, y)) {
+			boardTd[y * rules.boardWidth + x].appendChild(draggedDiv);
+			stopDrag(false);
+			update();
+		}
+		else {
+			stopDrag(true);
+		}
+	}
+}
+
+gameDiv.onmouseup = e => {
+	if (draggedDiv) {
+		stopDrag(true);
+	}
+};
 
 function makeCardDiv(card: Card): HTMLDivElement {
 	const cardDiv = document.createElement('div');
@@ -236,21 +298,7 @@ function makeCardDiv(card: Card): HTMLDivElement {
 
 	cardDiv.setAttribute('data-id', card.id.toString());
 
-	cardDiv.onmousedown = event => {
-		if (!draggedDiv) {
-			draggedDiv = cardDiv;
-			draggedDivOffsetX = draggedDiv.getBoundingClientRect().left - event.clientX;
-			draggedDivOffsetY = draggedDiv.getBoundingClientRect().top - event.clientY + window.scrollY;
-
-			cardDiv.classList.add('dragged');
-			document.body.appendChild(cardDiv);
-			document.body.onmousemove = onMouseMove;
-			onMouseMove(event);
-			
-			
-			console.log(draggedDivOffsetX, draggedDivOffsetY);
-		}
-	};
+	cardDiv.onmousedown = e => dragCardDiv(card, cardDiv, e);
 
 	cardDiv.appendChild(text);
 	cardDiv.appendChild(strength);
