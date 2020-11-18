@@ -11,6 +11,7 @@ body, html {
 	font-size: 14pt;
 	--my-card: #47a9ff;
 	--my-card-bg: #90d3e8;
+	overflow: hidden;
 }
 
 :root {
@@ -210,6 +211,7 @@ fieldset {
 	flex-direction: column;
 	grid-template-columns: 3fr 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 3fr;
 	grid-template-rows: repeat(8, 12.5vh);
+	overflow: hidden;
 }
 
 #myHand {
@@ -323,10 +325,7 @@ fieldset {
 	cursor: grab;
 }
 
-#game.dragging > .myfield
-{
-	cursor: grabbing;
-}
+.canDrop,
 #myHand.canReturn
 {
 	cursor: grabbing;

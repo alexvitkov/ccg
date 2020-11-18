@@ -51,16 +51,35 @@ export class Player {
 	game: Game;
 	hand: Card[];
 
-	canPlayCard() : boolean {
+	canPlayAnyCard() : boolean {
 		if (this.game.stage === 'BlindStage')
 			return this.unitsCount < this.game.rules.blindStageUnits;
 		return false;
 	}
 
-	canMoveCard() : boolean {
+	canMoveAnyCard(): boolean {
+		return this.game.stage === 'BlindStage';
+	}
+
+	canMoveCard(card: Card, x: number, y: number) : boolean {
+		if (card.owner !== this || !card.onBoard)
+			return false;
 		if (this.game.stage === 'BlindStage')
-			return true;
+			return y < this.game.rules.ownHeight;
+		const xy = this.game.xy(x, y);
+		if (this.game.board[xy])
+			return false;
 		return false;
+	}
+
+	allowedMoveSquaresXY(card: Card): number[] {
+		const squares = [];
+		if (!card.onBoard || this.game.stage === 'BlindStage') {
+			for (let y = 0; y < this.game.rules.ownHeight; y++)
+				for (let x = 0; x < this.game.rules.boardWidth; x++)
+					squares.push(this.game.xy(x, y));
+		}
+		return squares;
 	}
 
 	canReturnCard() : boolean {
@@ -70,30 +89,24 @@ export class Player {
 	// Assuming canPlayCard === true
 	playCard(posInHand: number, x: number, y: number): boolean {
 		const card = this.hand[posInHand];
-		if (!card)
+		if (!card || y > this.game.rules.ownHeight)
 			return false;
 		const xy = this.game.xy(x, y);
 		if (this.game.board[xy])
 			return false;
 
+		this.hand.splice(posInHand, 1);
 		this.game.board[xy] = card;
 		card.x = x;
 		card.y = y;
-		this.hand.splice(posInHand, 1);
 		return true;
 	}
 
-	// Assuming canMoveCard === true
 	moveCard(card: Card, x: number, y: number): boolean {
-		if (card.owner !== this)
-			return false;
-		const xy = this.game.xy(x, y);
-		if (this.game.board[xy])
+		if (!this.canMoveCard(card, x, y))
 			return false;
 
-		// make sure card is on board
-		if (card.x < 0)
-			return false;
+		const xy = this.game.xy(x, y);
 
 		delete this.game.board[this.game.xy(card.x, card.y)];
 		this.game.board[xy] = card;
@@ -116,8 +129,8 @@ export class Player {
 
 	get unitsCount() {
 		return Object.values(this.game.board)
-		             .filter(unit => unit.owner === this)
-					 .length;
+		.filter(unit => unit.owner === this)
+		.length;
 	}
 }
 

@@ -1,4 +1,4 @@
-import { Message, GameStartedMessage } from '../messages';
+import { GameStartedMessage } from '../messages';
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
 
 export var game: ClientGame;

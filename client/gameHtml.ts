@@ -35,7 +35,7 @@ function makeCardDiv(card: Card): HTMLDivElement {
 
 	cardDiv.setAttribute('data-id', card.id.toString());
 
-	cardDiv.onmousedown = e => dragCardDiv(card, cardDiv, e);
+	cardDiv.onmousedown = e => onCardDrag(card, cardDiv, e);
 
 	cardDiv.appendChild(text);
 	cardDiv.appendChild(strength);
@@ -77,16 +77,16 @@ export function onGameStarted() {
 	update();
 }
 
-function dragCardDiv(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
+function onCardDrag(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 	// not valid if we're currently dragging a card
 	if (draggedDiv || card.owner !== game.p1)
 		return;
 
 	const posInHand = game.p1.hand.indexOf(card);
-	if (posInHand !== -1 && !game.p1.canPlayCard())
+	if (posInHand !== -1 && !game.p1.canPlayAnyCard())
 		return false;
 
-	if (card.onBoard && !game.p1.canMoveCard)
+	if (card.onBoard && !game.p1.canMoveAnyCard())
 		return false;
 
 	draggedDiv = cardDiv;
@@ -95,15 +95,18 @@ function dragCardDiv(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 	draggedDivOffsetY = draggedDiv.getBoundingClientRect().top - event.clientY + window.scrollY;
 	draggedCardPosInHand = posInHand;
 
+	const allowedSquares = game.p1.allowedMoveSquaresXY(card);
+	for (const sq of allowedSquares)
+		boardTd[sq].classList.add('canDrop');
+	gameDiv.classList.add('dragging');
+	cardDiv.classList.add('dragged');
+
 	draggedCardPlaceholder = document.createElement('div');
 	draggedCardPlaceholder.classList.add('placeholder');
 
 	if (isDraggedCardFromHand())
 		handPlaceholders[card.id] = draggedCardPlaceholder;
 	cardDiv.parentElement.insertBefore(draggedCardPlaceholder, cardDiv);
-
-	gameDiv.classList.add('dragging');
-	cardDiv.classList.add('dragged');
 
 	document.body.appendChild(cardDiv);
 	document.body.onmousemove = onMouseMove;
@@ -113,12 +116,12 @@ function dragCardDiv(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 }
 
 function update() {
-	if (game.p1.canPlayCard())
+	if (game.p1.canPlayAnyCard())
 		myHandDiv.classList.add('canPlay');
 	else
 		myHandDiv.classList.remove('canPlay');
 
-	if (game.p1.canMoveCard())
+	if (game.p1.canMoveAnyCard())
 		gameDiv.classList.add('canMove');
 	else 
 		gameDiv.classList.remove('canMove');
@@ -138,6 +141,8 @@ function stopDrag(returnToPlaceholder: boolean) {
 	if (!isDraggedCardFromHand() && draggedCardPlaceholder) {
 		draggedCardPlaceholder.remove();
 	}
+	for (const td of boardTd)
+		td.classList.remove('canDrop');
 
 	draggedDiv.classList.remove('dragged');
 	gameDiv.classList.remove('dragging');
@@ -176,13 +181,12 @@ function onDropOnGrid(x: number, y: number) {
 				update();
 			}
 		}
-
 	}
 }
 
 myHandDiv.onmouseup = e => {
 	if (draggedDiv) {
-		// currentlyDraggingCard is from hand, just return it
+		// if currentlyDraggingCard is from hand, just return it
 		if (isDraggedCardFromHand()) {
 			stopDrag(true);
 		}
