@@ -224,17 +224,17 @@ fieldset {
 #myHand, #opponentHand {
 	grid-column: 1 / span 9;
 	display: flex;
-	background: white;
+	gap: 0.3rem;
+	align-items: center;
+	justify-content: center;
 }
 
 .sidebar1 {
-	background: red;
 	grid-column: 1;
 	grid-row: 2 / span 6;
 }
 
 .sidebar2 {
-	background: red;
 	grid-column: 9;
 	grid-row: 2 / span 6;
 }
@@ -270,9 +270,13 @@ fieldset {
 }
 
 .card, .placeholder {
+	border: 0.4vh solid  var(--my-card);
+}
+
+.card, .placeholder, .card > .text {
 	width: 8vh;
 	height: 11vh;
-	border: 0.4vh solid  var(--my-card);
+	line-height: 11vh;
 }
 
 .card {
@@ -285,25 +289,23 @@ fieldset {
 	position: relative;
 	color: black;
 	text-align: center;
-	padding-top: 10px;
 	margin: 0;
 	top: 0;
 	left: 0;
 }
 
 .card > .strength {
-	top: 0;
+	bottom: 0;
 	left: 0;
 	margin: 0;
 	position: absolute;
 	width: 30px;
 	height: 30px;
-	text-align: center;
 	line-height: 30px;
-	background: var(--my-card);
-	color: white;
-	font-weight: bold;
 	text-align: center;
+	color: black;
+	background: var(--my-card);
+	font-weight: bold;
 }
 
 .card.dragged {
