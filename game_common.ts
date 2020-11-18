@@ -95,10 +95,7 @@ export class Player {
 		if (card.x < 0)
 			return false;
 
-		console.log(this.game.board);
-
 		delete this.game.board[this.game.xy(card.x, card.y)];
-		console.log(this.game.board);
 		this.game.board[xy] = card;
 		card.x = x;
 		card.y = y;
