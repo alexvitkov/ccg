@@ -1,12 +1,20 @@
 import { GameStartedMessage } from '../messages';
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
+import { set } from './gameHtml';
 
 export var game: ClientGame;
 export var rules: GameRules;
 
+export class ClientPlayer extends Player {
+
+	recalculateStrength() {
+		set(this === game.p1 ? 'myStrength' : 'enemyStrength', this.strength.toString());
+	}
+}
+
 export class ClientGame extends Game {
 	constructor(message: GameStartedMessage) {
-		super(message.rules, new Player(), new Player());
+		super(message.rules, new ClientPlayer(), new ClientPlayer());
 		this.p1.game = this;
 		this.p2.game = this;
 		game = this;

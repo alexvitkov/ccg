@@ -2,6 +2,8 @@ import { game, rules } from './game';
 import { Card } from '../game_common';
 
 const gameDiv = document.getElementById("game");
+const readyButton = document.getElementById("readyButton");
+readyButton.onclick = ready;
 gameDiv.onmouseup = e => { if (draggedDiv) { stopDrag(true); } };
 
 const myHandDiv = document.getElementById("myHand");
@@ -59,6 +61,8 @@ export function onGameStarted() {
 			last.parentNode.insertBefore(td, last.nextSibling);
 			last = td;
 
+			td.style.gridColumnStart = (x + 2).toString();
+			td.style.gridRowStart = (7 - y).toString();
 			td.classList.add('field');
 
 			if (y < rules.ownHeight)
@@ -217,5 +221,17 @@ function onMouseMove(event: MouseEvent) {
 		draggedCardPosInHand = game.p1.hand.indexOf(card);
 		draggedDiv.style.top = (event.clientY + draggedDivOffsetY) + 'px';
 		draggedDiv.style.left = (event.clientX + draggedDivOffsetX) + 'px';
+	}
+}
+
+function ready() {
+	if (game.stage === 'BlindStage') {
+		
+	}
+}
+
+export function set(className: string, value: string) {
+	for (const el of document.getElementsByClassName(className)) {
+		(el as HTMLElement).innerText = value;
 	}
 }

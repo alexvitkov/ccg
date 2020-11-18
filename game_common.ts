@@ -89,7 +89,7 @@ export class Player {
 	// Assuming canPlayCard === true
 	playCard(posInHand: number, x: number, y: number): boolean {
 		const card = this.hand[posInHand];
-		if (!card || y > this.game.rules.ownHeight)
+		if (!card || y >= this.game.rules.ownHeight)
 			return false;
 		const xy = this.game.xy(x, y);
 		if (this.game.board[xy])
@@ -99,8 +99,21 @@ export class Player {
 		this.game.board[xy] = card;
 		card.x = x;
 		card.y = y;
+		this.recalculateStrength();
 		return true;
 	}
+
+	get strength(): number {
+		let str = 0;
+		for (const unit of Object.values(this.game.board)) {
+			if (unit.owner === this)
+				str += unit.strength;
+		}
+		return str;
+	}
+
+	recalculateStrength() {
+ 	}
 
 	moveCard(card: Card, x: number, y: number): boolean {
 		if (!this.canMoveCard(card, x, y))
@@ -125,6 +138,8 @@ export class Player {
 
 		const pcIndex = this.hand.indexOf(previousCard);
 		this.hand.splice(pcIndex + 1, 0, card);
+
+		this.recalculateStrength();
 	}
 
 	get unitsCount() {
