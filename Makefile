@@ -3,7 +3,7 @@ all: dist dist/index.js dist/static dist/static/main.js dist/views
 dist:
 	mkdir dist
 
-dist/index.js: dist server/*
+dist/index.js: dist server/* ./game_common.ts ./messages.ts
 	npx esbuild \
 		--outfile="$@" \
 		--sourcemap \
@@ -12,7 +12,7 @@ dist/index.js: dist server/*
 		--target=es2017 \
 		server/index.ts
 
-dist/static/main.js: client/*
+dist/static/main.js: client/* ./game_common.ts ./messages.ts
 	npx esbuild \
 		--outfile="$@" \
 		--sourcemap \

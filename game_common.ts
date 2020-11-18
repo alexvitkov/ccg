@@ -64,12 +64,12 @@ export class Player {
 	canMoveCard(card: Card, x: number, y: number) : boolean {
 		if (card.owner !== this || !card.onBoard)
 			return false;
-		if (this.game.stage === 'BlindStage')
-			return y < this.game.rules.ownHeight;
+		if (this.game.stage === 'BlindStage' && y >= this.game.rules.ownHeight)
+			return false;
 		const xy = this.game.xy(x, y);
 		if (this.game.board[xy])
 			return false;
-		return false;
+		return true;
 	}
 
 	allowedMoveSquaresXY(card: Card): number[] {
