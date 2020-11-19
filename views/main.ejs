@@ -3,8 +3,8 @@
 </script>
 
 <div id="lobbies">
-	<button id="createLobbyButton" onclick="createLobby()"<%=inLobby ? ' disabled' : ''%>>Create a lobby</button>
-	<button onclick="refreshLobbies()">Refresh lobbies</button>
+	<button id="createLobbyButton" <%=inLobby ? ' disabled' : ''%>>Create a lobby</button>
+	<button id="refreshLobbiesButton">Refresh lobbies</button>
 
 	<table id="lobbiesTable" style="display: none;">
 		<tr>
@@ -24,8 +24,8 @@
 	<div id="sidebar1"></div>
 	<div id="sidebar2">
 		<div class="playerInfo">
-			<p>Strength: <span class="enemyStrength">?</span></p>
 			<p>Move Points: <span class="enemyMovePoints">0</span>/4</p>
+			<p>Strength: <span class="enemyStrength">?</span></p>
 		</div>
 		<button id="readyButton">READY</button>
 		<div class="playerInfo">

@@ -89,7 +89,7 @@ export function handleLobbyWsMessage(session: Session, message: {[key:string]:an
 		}
 
 		case 'startGame': {
-			if (session.lobby && session.lobby.creatorSession == session && session.lobby.otherPlayer) {
+			if (!this.game && session.lobby && session.lobby.creatorSession == session && session.lobby.otherPlayer) {
 				this.game = new ServerGame(ruleset, session.lobby.creatorSession, session.lobby.otherPlayer);
 				break;
 			}
