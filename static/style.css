@@ -272,7 +272,7 @@ fieldset {
 
 .card, .placeholder, .card > .text {
 	width: 8vh;
-	height: 11vh;
+	height: 10vh;
 	line-height: 11vh;
 }
 
@@ -288,7 +288,6 @@ fieldset {
 	background: var(--opponent-card-bg);
 }
 
-
 .card > .text {
 	position: relative;
 	color: black;
@@ -299,8 +298,8 @@ fieldset {
 }
 
 .card > .strength {
-	bottom: 0;
-	left: 0;
+	bottom: -.8vh;
+	left: -.8vh;
 	margin: 0;
 	position: absolute;
 	width: 30px;
