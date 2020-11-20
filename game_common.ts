@@ -85,10 +85,6 @@ export class Player {
 		return Object.values(this.game._board).filter(c => c.owner === this);
 	}
 
-	canReturnCard() : boolean {
-		return this.game.stage === 'BlindStage';
-	}
-
 	// Assuming canPlayCard === true
 	// DEPRECATED
 	// This is used in the client, does a check for ownHeight
@@ -141,16 +137,6 @@ export class Player {
 		return true;
 	}
 
-
-	// Assuming canReturnCard() === true
-	// previousCard = null to insert at start of hand
-	returnCard(card: Card, previousCard?: Card) {
-
-		const pcIndex = this.hand.indexOf(previousCard);
-		this.hand.splice(pcIndex + 1, 0, card);
-
-		this.recalculateStrength();
-	}
 }
 
 export type Stage = 'BlindStage' | 'Play' | 'Active' | 'Move';

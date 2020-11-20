@@ -136,7 +136,7 @@ function update() {
 	else 
 		gameDiv.classList.remove('canMove');
 
-	if (draggedDiv && ((draggedCard.x && game.p1.canReturnCard()) || isDraggedCardFromHand()))
+	if (draggedDiv && ((draggedCard.x && game.stage === 'BlindStage') || isDraggedCardFromHand()))
 		myHandDiv.classList.add('canReturn');
 	else
 		myHandDiv.classList.remove('canReturn');
@@ -199,7 +199,8 @@ myHandDiv.onmouseup = _e => {
 		if (isDraggedCardFromHand()) {
 			stopDrag(true);
 		}
-		else if (game.p1.canReturnCard()) {
+		// Can only return cards if blindstage
+		else if (game.stage === 'BlindStage') {
 			const placeholder = handPlaceholders[draggedCard.id];
 			var prevCardDiv: Element = placeholder;
 			do {

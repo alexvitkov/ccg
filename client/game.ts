@@ -18,9 +18,19 @@ export class ClientPlayer extends Player {
 	recalculateStrength() {
 		set(this === game.p1 ? 'myStrength' : 'enemyStrength', this.strength.toString());
 	}
+
+	// previousCard = null to insert at start of hand
+	returnCard(card: Card, previousCard?: Card) {
+		const pcIndex = this.hand.indexOf(previousCard);
+		this.hand.splice(pcIndex + 1, 0, card);
+		this.recalculateStrength();
+	}
 }
 
 export class ClientGame extends Game {
+	p1: ClientPlayer;
+	p2: ClientPlayer;
+
 	constructor(message: messages.GameStartedMessage) {
 		super(message.rules);
 		this.p1 = new ClientPlayer(this);
