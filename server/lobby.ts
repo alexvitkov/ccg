@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Session } from './session';
 import { ruleset, ServerGame } from './game';
 
-import { ListLobbiesResponse } from '../messages';
+import { Message, ListLobbiesResponse } from '../messages';
 
 const lobbies2: {[lobbyId: string]: Lobby} = {};
 
@@ -53,7 +53,8 @@ function leaveLobby(session: Session) {
 	refreshLobbiesForPlayer(session);
 }
 
-export function handleLobbyWsMessage(session: Session, message: {[key:string]:any}) {
+export function handleLobbyWsMessage(session: Session, message: Message) {
+	console.log(message.message);
 	switch (message.message) {
 		case 'createLobby': {
 			if (!session.lobby)
@@ -89,17 +90,20 @@ export function handleLobbyWsMessage(session: Session, message: {[key:string]:an
 		}
 
 		case 'startGame': {
-			if (!this.game && session.lobby && session.lobby.creatorSession == session && session.lobby.otherPlayer) {
-				this.game = new ServerGame(ruleset, session.lobby.creatorSession, session.lobby.otherPlayer);
+			if (session.lobby && !session.lobby.game && session.lobby.creatorSession == session && session.lobby.otherPlayer) {
+				session.lobby.game = new ServerGame(ruleset, session.lobby.creatorSession, session.lobby.otherPlayer);
 				break;
 			}
 		}
 
 		default: {
-			if (this.gameStarted)
-				return this.game.handleGameWsMessage(session, message);
+			if (session.lobby && session.lobby.game) {
+				return session.lobby.game.handleGameWsMessage(session, message);
+			}
+			return false;
 		}
 	}
+
 	return true;
 }
 

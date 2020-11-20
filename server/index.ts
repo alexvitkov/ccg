@@ -8,6 +8,7 @@ import ws from 'ws';
 
 import { handleLobbyWsMessage } from './lobby';
 import { Session } from './session';
+import { Message } from '../messages';
 
 
 const mongoDbUri = process.env.MONGOURI || "mongodb://127.0.0.1:27017/?poolSize=20&w=majority";
@@ -95,7 +96,7 @@ function runExpress() {
 					sock.close(4003, 'Invalid message');
 				}
 				else if (sock.readyState === sock.OPEN) {
-					if (!handleWsMessage(session, msg))
+					if (!handleWsMessage(session, msg as Message))
 						sock.close(4004, 'Invalid message');
 				}
 			});
@@ -104,8 +105,9 @@ function runExpress() {
 }
 
 
-function handleWsMessage(session: Session, message: {[key:string]:any}) {
+function handleWsMessage(session: Session, message: Message) {
 	// console.log(`WS[${session.username}]: `, message);
+	// the lobby also handles game messages
 	if (handleLobbyWsMessage(session, message)) {
 		return true;
 	}

@@ -82,11 +82,19 @@ export class Player {
 		return squares;
 	}
 
+	getUnits() {
+		return Object.values(this.game.board).filter(c => c.owner === this);
+	}
+
 	canReturnCard() : boolean {
 		return this.game.stage === 'BlindStage';
 	}
 
 	// Assuming canPlayCard === true
+	// DEPRECATED
+	// This is used in the client, does a check for ownHeight
+	// when replaced with the new one, make sure to not foget the other one
+	// does no check for ownHeight
 	playCard(posInHand: number, x: number, y: number): boolean {
 		const card = this.hand[posInHand];
 		if (!card || y >= this.game.rules.ownHeight)
@@ -103,15 +111,34 @@ export class Player {
 		return true;
 	}
 
+	// Assuming canPlayCard === true
+	playCard2(card: Card, x: number, y: number): boolean {
+		const posInHand = this.hand.indexOf(card);
+
+		if (posInHand === -1)
+			return false;
+		const xy = this.game.xy(x, y);
+		console.log(xy);
+		if (this.game.board[xy])
+			return false;
+
+		this.hand.splice(posInHand, 1);
+		this.game.board[xy] = card;
+		card.x = x;
+		card.y = y;
+		this.recalculateStrength();
+		return true;
+	}
+
 	get strength(): number {
 		let str = 0;
-		for (const unit of Object.values(this.game.board)) {
-			if (unit.owner === this)
-				str += unit.strength;
+		for (const unit of this.getUnits()) {
+			str += unit.strength;
 		}
 		return str;
 	}
 
+	// abstract
 	recalculateStrength() {
  	}
 
@@ -149,7 +176,7 @@ export class Player {
 	}
 }
 
-export type Stage = 'BlindStage';
+export type Stage = 'BlindStage' | 'Play' | 'Active' | 'Move';
 
 export class Game {
 	rules: GameRules;
@@ -161,12 +188,10 @@ export class Game {
 	cards: {[id: number]: Card};
 	board: {[xy: number]: Card};
 
-	constructor(rules: GameRules, p1: Player, p2: Player) {
+	constructor(rules: GameRules) {
 		this.cards = {};
 		this.board = {};
 		this.rules = rules;
-		this.p1 = p1;
-		this.p2 = p2;
 		this.stage = 'BlindStage';
 	}
 

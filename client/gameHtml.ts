@@ -2,7 +2,7 @@ import { game, rules } from './game';
 import { Card } from '../game_common';
 
 const gameDiv = document.getElementById("game");
-const readyButton = document.getElementById("readyButton");
+const readyButton: HTMLButtonElement = document.getElementById("readyButton") as any;
 readyButton.onclick = ready;
 gameDiv.onmouseup = e => { if (draggedDiv) { stopDrag(true); } };
 
@@ -226,7 +226,8 @@ function onMouseMove(event: MouseEvent) {
 
 function ready() {
 	if (game.stage === 'BlindStage') {
-		
+		readyButton.disabled = true;
+		game.doneWithBlindStage();
 	}
 }
 

@@ -20,9 +20,9 @@ wsConnect(() => {
 });
 
 function handleMessage(msg: Message): boolean {
+	console.log(msg);
 	switch (msg.message) {
 		case 'gameStarted': {
-			console.log('asdf')
 			new ClientGame(msg as GameStartedMessage);
 			onGameStarted();
 			return true;
