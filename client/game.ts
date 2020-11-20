@@ -150,10 +150,9 @@ export class ClientGame extends Game {
 			const card = this.instantiate(id, this.p2, this.rules.cardSet[cardID]);
 			this.putCard(x, y, card);
 		}
-		this.stage = msg.gameStage;
 		this.turn = msg.myTurn ? this.p1 : this.p2;
 		blindStageOver();
-		onStageChanged();
+		this.nextStage();
 	}
 
 	putCard(x: number, y: number, card: ClientCard): boolean {

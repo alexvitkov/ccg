@@ -12,7 +12,7 @@ export const ruleset: GameRules = {
 	blindStageUnits: 3,
 	cardSet: [
 		new CardProto(0, 'Bomber', 4, 'BOMB', 'bomberActive'),
-		new CardProto(1, 'Healer', 3, 'HEAL'),
+		new CardProto(1, 'Healer', 3, 'HEAL', null, 'healerPassive'),
 		new CardProto(2, 'Gunner', 3, 'GUN'),
 	],
 	minDeckSize: 20,
@@ -47,7 +47,6 @@ class ServerPlayer extends Player {
 }
 
 export class ServerGame extends Game {
-
 	p1: ServerPlayer;
 	p2: ServerPlayer;
 
@@ -255,7 +254,7 @@ export class ServerGame extends Game {
 		const str2 = this.p2.strength;
 
 		this.turn = str1 >= str2 ? this.p1 : this.p2;
-		this.stage = 'Play';
+		this.nextStage();
 
 		this.p1.send({
 			message: 'blindStageOver',

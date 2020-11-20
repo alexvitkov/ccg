@@ -1,4 +1,5 @@
 import { actives } from './actives';
+import { passives, Passive } from './passive';
 
 export class CardProto {
 	cardID: number;
@@ -6,14 +7,18 @@ export class CardProto {
 	baseStrength: number;
 
 	active: string;
+	sot: string;
+	eot: string;
 	cardLetter: string;
 
-	constructor(cardID: number, cardName: string, baseStrength: number, cardLetter: string, active?: string) {
+	constructor(cardID: number, cardName: string, baseStrength: number, cardLetter: string, active?: string, sot?: string, eot?: string) {
 		this.cardID=cardID;
 		this.cardName=cardName;
 		this.baseStrength=baseStrength;
 		this.cardLetter=cardLetter;
 		this.active = active;
+		this.sot = sot;
+		this.eot = eot;
 	}
 }
 
@@ -25,6 +30,8 @@ export class Card {
 	x: number;
 	y: number;
 	active: () => void;
+	sot: () => void;
+	eot: () => void;
 
 	get onBoard() {
 		return this.x >= 0;
@@ -49,6 +56,10 @@ export class Card {
 		this.y = -1;
 		if (proto.active)
 			this.active = () => { actives[proto.active](this.owner.game, this); }
+		if (proto.sot)
+			this.sot = () => { passives[proto.sot](this.owner.game, this); }
+		if (proto.eot)
+			this.eot = () => { passives[proto.sot](this.owner.game, this); }
 	}
 }
 
@@ -72,10 +83,13 @@ export class Player {
 	isPlayer2: boolean;
 	movePoints: number;
 
+	sot: { card: Card, effect: () => void }[] = [];
+	eot: { card: Card, effect: () => void }[] = [];
+
 	constructor(game: Game, isPlayer2: boolean) {
 		this.game = game;
 		this.isPlayer2 = isPlayer2;
-		this.movePoints = game.rules.movePointsPerTurn;
+		this.movePoints = 0;
 	}
 
 	active(card: Card): boolean {
@@ -205,15 +219,27 @@ export class Game {
 				this.stage = 'Move';
 				break;
 			}
-			case 'Move': {
-				this.stage = 'Play';
+			case 'Move': 
+				// Trigger EOT effects for player who just finished his turn
+				this.turn.eot = this.turn.eot.filter(c => c.card.onBoard);
+				for (const e of this.turn.eot) {
+					e.effect();
+				}
+				// Switch player
 				this.turn = this.otherPlayer(this.turn);
+				// FALLTHROUGH
+			case 'BlindStage':
+				// Trigger SOT effects for the player who just started his turn
+				this.stage = 'Play';
 				this.turn.movePoints += this.rules.movePointsPerTurn;
 				if (this.turn.movePoints > this.rules.maxMovePoints)
 					this.turn.movePoints = this.rules.maxMovePoints;
-				this
+
+				//this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
+				for (const e of this.turn.sot) {
+					e.effect();
+				}
 				break;
-			}
 		}
 	}
 
@@ -235,7 +261,14 @@ export class Game {
 	putCard(x: number, y: number, card: Card): boolean {
 		if (this.getBoard(x, y))
 			return false;
-		this.liftCard(card);
+		if (!card.onBoard) {
+			if (card.sot)
+				card.owner.sot.push({card: card, effect: card.sot});
+			if (card.eot)
+				card.owner.eot.push({card: card, effect: card.sot});
+		}
+		const xy = this._xy(card.x, card.y);
+		delete this._board[xy];
 		this._board[y * this.rules.boardWidth + x] = card;
 		card.x = x;
 		card.y = y;
