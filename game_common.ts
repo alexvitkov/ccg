@@ -4,6 +4,7 @@ import { passives, Passive } from './passive';
 export class CardProto {
 	cardID: number;
 	cardName: string;
+	cardDescription: string;
 	baseStrength: number;
 
 	active: string;
@@ -11,9 +12,10 @@ export class CardProto {
 	eot: string;
 	cardLetter: string;
 
-	constructor(cardID: number, cardName: string, baseStrength: number, cardLetter: string, active?: string, sot?: string, eot?: string) {
+	constructor(cardID: number, cardName: string, desc: string, baseStrength: number, cardLetter: string, active?: string, sot?: string, eot?: string) {
 		this.cardID=cardID;
 		this.cardName=cardName;
+		this.cardDescription = desc;
 		this.baseStrength=baseStrength;
 		this.cardLetter=cardLetter;
 		this.active = active;

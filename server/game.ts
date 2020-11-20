@@ -11,9 +11,9 @@ export const ruleset: GameRules = {
 	startingHandSize: 10,
 	blindStageUnits: 3,
 	cardSet: [
-		new CardProto(0, 'Bomber', 4, 'BOMB', 'bomberActive'),
-		new CardProto(1, 'Healer', 3, 'HEAL', null, 'healerPassive'),
-		new CardProto(2, 'Gunner', 3, 'GUN'),
+		new CardProto(0, 'Bomber', 'ACTIVE: Deal 4 damage to all units in a 3x3 square around the bomber', 3, 'BOMB', 'bomberActive'),
+		new CardProto(1, 'Healer', 'SOT: Heal all the nearest units for 1', 3, 'HEAL', null, 'healerPassive'),
+		new CardProto(2, 'Gunner', 'EOT: Fire a bullet dealing 1 damage.', 4, 'GUN'),
 	],
 	minDeckSize: 20,
 	maxDeckSize: 30,
