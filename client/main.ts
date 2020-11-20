@@ -20,6 +20,7 @@ wsConnect(() => {
 });
 
 function handleMessage(msg: messages.Message): boolean {
+	// TODO handle this in game.ts
 	console.log(msg);
 	switch (msg.message) {
 		case 'gameStarted': {
@@ -29,6 +30,22 @@ function handleMessage(msg: messages.Message): boolean {
 		}
 		case 'blindStageOver': {
 			game.blindStageOver(msg as messages.BlindStageOverMessage);
+			break;
+		}
+		case 'opponentPlayedCard': {
+			const { id, cardID, x, y } = msg;
+			game.instantiate(id, game.p2, game.rules.cardSet[cardID]);
+			game.putCard(x, y, game.cards[id]);
+			break;
+		}
+		case 'opponentMovedCard': {
+			const { id, x, y } = msg;
+			game.putCard(x, y, game.cards[id]);
+			break;
+		}
+		case 'nextStage': {
+			game.nextStage();
+			break;
 		}
 	}
 	return handleLobbyMessage(msg);

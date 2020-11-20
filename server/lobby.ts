@@ -54,7 +54,6 @@ function leaveLobby(session: Session) {
 }
 
 export function handleLobbyWsMessage(session: Session, message: Message) {
-	console.log(message.message);
 	switch (message.message) {
 		case 'createLobby': {
 			if (!session.lobby)

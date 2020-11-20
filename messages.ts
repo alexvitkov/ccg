@@ -1,4 +1,4 @@
-import { GameRules } from './game_common';
+import { GameRules, Stage } from './game_common';
 
 export type Message = {
 	message: string;
@@ -28,6 +28,6 @@ export type DoneWithBlindStageMessage = {
 export type BlindStageOverMessage = {
 	message: 'blindStageOver';
 	otherPlayerPlayed: [id: number, cardID: number, x: number, y: number][];
-	goFirst: boolean;
+	myTurn: boolean,
+	gameStage: Stage,
 }
-

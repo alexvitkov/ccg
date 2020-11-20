@@ -319,16 +319,12 @@ fieldset {
 	pointer-events: none;
 }
 
-.card.draggable {
-	cursor: grab;
-}
-
 #game.dragging {
 	cursor: no-drop;
 }
 
-#myHand.canPlay > .card,
-#game.canMove > .field > .card 
+#game.canPlay > #myHand > .card,
+#game.canMove > .field  > .mycard 
 {
 	cursor: grab;
 }

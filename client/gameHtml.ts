@@ -1,4 +1,5 @@
 import { game, ClientCard, rules } from './game';
+import { send } from './main';
 
 const gameDiv = document.getElementById("game");
 const blindStageMessageDiv = document.getElementById('blindStageMessage');
@@ -156,15 +157,18 @@ function onDropOnGrid(x: number, y: number) {
 
 	// We're dragigng a card from the hand, aka playing
 	if (isDraggedCardFromHand) {
-		if (game.p1.S_playCardFromHand(draggedCard, x, y)) {
+		if (game.p1.S_canPlayCardFromHand(x, y, draggedCard)) {
+			game.p1.S_playCardFromHand(x, y, draggedCard);
 			stopDrag(false); 
 			return;
 		}
 	}
 	// We're a dragging a card from the board
-	else if (game.putCard(x, y, draggedCard)) {
-		stopDrag(false);
-		return;
+	else {
+		if (game.p1.moveCard(x, y, draggedCard)) {
+			stopDrag(false);
+			return;
+		}
 	}
 
 	stopDrag(true);
@@ -210,6 +214,12 @@ function ready() {
 		readyButton.disabled = true;
 		game.doneWithBlindStage();
 	}
+	else {
+		send({
+			message: 'skip'
+		});
+		game.nextStage();
+	}
 }
 
 export function set(className: string, value: string) {
@@ -220,4 +230,25 @@ export function set(className: string, value: string) {
 
 export function blindStageOver() {
 	blindStageMessageDiv.style.display = 'none';
+}
+
+export function stageChanged() {
+	set('whoseturn', game.turn === game.p1 ? 'Your' : "Opponent's");
+	set('stage', game.stage);
+	gameDiv.classList.remove('canMove');
+	gameDiv.classList.remove('canPlay');
+
+	readyButton.innerText = game.turn === game.p1 ? 'Skip ' + game.stage : "Opponent's turn";
+	readyButton.disabled  = game.turn !== game.p1;
+
+	if (game.turn === game.p1) {
+		switch (game.stage) {
+			case 'Move':
+				gameDiv.classList.add('canMove');
+			break;
+			case 'Play':
+				gameDiv.classList.add('canPlay');
+			break;
+		}
+	}
 }
