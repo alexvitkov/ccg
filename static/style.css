@@ -208,12 +208,20 @@ fieldset {
 }
 
 #game {
+	font-size: 4vh;
 	height: 100%;
 	display: grid;
 	flex-direction: column;
-	grid-template-columns: 3fr 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 3fr;
+	grid-template-columns: 1fr 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 37.5vh;
 	grid-template-rows: repeat(8, 12.5vh);
 	overflow: hidden;
+}
+
+@media (min-aspect-ratio: 13/8) {
+	#game {
+		grid-template-columns: 3fr 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 3fr;
+		grid-template-rows: repeat(8, 12.5vh);
+	}
 }
 
 #myHand {
@@ -262,6 +270,12 @@ fieldset {
 	background: #d72980;
 }
 
+.card {
+	font-size: 2.5vh;
+	position: relative;
+	z-index: 5;
+}
+
 .mycard, .placeholder {
 	border: 1vh solid  var(--my-card);
 }
@@ -273,12 +287,9 @@ fieldset {
 .card, .placeholder, .card > .text {
 	width: 8vh;
 	height: 10vh;
-	line-height: 11vh;
+	line-height: 8.5vh;
 }
 
-.card {
-	position: relative;
-}
 
 .mycard {
 	background: var(--my-card-bg);
@@ -302,9 +313,9 @@ fieldset {
 	left: -.8vh;
 	margin: 0;
 	position: absolute;
-	width: 30px;
-	height: 30px;
-	line-height: 30px;
+	width: 4vh;
+	height: 4vh;
+	line-height: 4vh;
 	text-align: center;
 	color: black;
 	font-weight: bold;
@@ -341,18 +352,19 @@ fieldset {
 	grid-column: 2 / span 7;
 	text-align: center;
 	background: rgba(0,0,0,0.8);
-	margin: 8vh;
+	margin: 6vh;
 	box-shadow: 0 0 4vh 8vh rgba(0,0,0,0.8);
+	font-size: 2vh;
 }
 
 #blindStageMessage > h1 {
 	margin: 0;
-	margin-bottom: 5vh;
+	margin-bottom: 3vh;
 }
 
 #blindStageMessage > p {
 	margin: 0;
-	margin-bottom: 3vh;
+	margin-bottom: 1vh;
 }
 
 #sidebar1 {
@@ -364,13 +376,45 @@ fieldset {
 	padding: 2vh;
 	grid-column: 9;
 	grid-row: 2 / span 6;
+
 	display: flex;
 	flex-direction: column;
-	font-size: 1.3rem;
 	justify-content: center;
 }
 
+#sidebar2 * {
+	margin: 0;
+	padding: 0;
+}
+
+.stage2 {
+	flex: 0 0 0;
+	font-size: 2.5vh;
+	text-align: center;
+}
+
+.playerInfo {
+	flex: 2 0 0;
+}
+
+.strength {
+	display: flex;
+	align-items: center;
+	gap: 2vh;
+}
+
+.myStrength, .enemyStrength {
+	font-size: 15vh;
+	font-weight: bold;
+}
+
+.readyButtonContainer {
+	max-width: 32vh;
+	flex: 1 0 0;
+	display: flex;
+	flex-direction: column;
+}
+
 #readyButton {
-	font-size: 2rem;
-	padding: 1rem;
+	flex: 1 0 0;
 }
