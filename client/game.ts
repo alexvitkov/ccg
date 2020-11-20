@@ -1,6 +1,6 @@
-import { Message, GameStartedMessage, DoneWithBlindStageMessage } from '../messages';
+import { Message, GameStartedMessage, DoneWithBlindStageMessage, BlindStageOverMessage } from '../messages';
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
-import { set } from './gameHtml';
+import { set, blindStageOver, makeCardDiv } from './gameHtml';
 import { send } from './main';
 
 export var game: ClientGame;
@@ -46,6 +46,16 @@ export class ClientGame extends Game {
 			message: 'doneWithBlindStage',
 			played: Object.values(this.board).map(card => [card.id, card.x, card.y])
 		} as DoneWithBlindStageMessage);
+	}
+
+	blindStageOver(msg: BlindStageOverMessage) {
+		for (const [id, cardID, x, y] of msg.otherPlayerPlayed) {
+		 	const card = this.instantiate(id, this.p2, this.rules.cardSet[cardID]);
+			const xy = this.xy(x, y);
+			this.board[xy] = card;
+			makeCardDiv(card, x, y);
+		}
+		blindStageOver();
 	}
 }
 

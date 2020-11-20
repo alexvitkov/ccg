@@ -1,7 +1,7 @@
 import { handleLobbyMessage, refreshLobbies } from './lobby';
-import { ClientGame } from './game';
+import { game, ClientGame } from './game';
 import { onGameStarted } from './gameHtml';
-import { Message, GameStartedMessage, ListLobbiesResponse } from '../messages';
+import { Message, GameStartedMessage, ListLobbiesResponse, BlindStageOverMessage } from '../messages';
 
 var ws: WebSocket;
 
@@ -26,6 +26,9 @@ function handleMessage(msg: Message): boolean {
 			new ClientGame(msg as GameStartedMessage);
 			onGameStarted();
 			return true;
+		}
+		case 'blindStageOver': {
+			game.blindStageOver(msg as BlindStageOverMessage);
 		}
 	}
 	return handleLobbyMessage(msg);
