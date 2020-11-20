@@ -12,7 +12,6 @@ const opponentHandDiv = document.getElementById("opponentHandDiv ");
 
 const lobbiesDiv = document.getElementById("lobbies");
 
-
 var boardTd: HTMLElement[] = [];
 
 // DRAGGING
