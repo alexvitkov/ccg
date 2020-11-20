@@ -17,6 +17,7 @@ export class ClientCard extends Card {
 
 export class ClientPlayer extends Player {
 	game: Game;
+	hand: ClientCard[];
 
 	constructor(game: Game) {
 		super();
@@ -28,8 +29,9 @@ export class ClientPlayer extends Player {
 	}
 
 	// previousCard = null to insert at start of hand
-	returnCard(card: Card, previousCard?: Card) {
+	returnCard(card: ClientCard, previousCard?: ClientCard) {
 		const pcIndex = this.hand.indexOf(previousCard);
+		this.game.liftCard(card);
 		this.hand.splice(pcIndex + 1, 0, card);
 		this.recalculateStrength();
 	}
@@ -74,14 +76,20 @@ export class ClientGame extends Game {
 		blindStageOver();
 	}
 
-	putCard(x: number, y: number, card: ClientCard) {
+	putCard(x: number, y: number, card: ClientCard): boolean {
+		if (!super.putCard(x, y, card))
+			return false;
 		fieldDivs[this._xy(x, y)].appendChild(card.div);
-		super.putCard(x, y, card);
+		return true;
 	}
 
 	canPlayCards() {
 		return this.stage === 'BlindStage' 
 			&& this.p1.getUnits().length < this.rules.blindStageUnits;
+	}
+
+	canMoveCards() {
+		return this.stage === 'BlindStage';
 	}
 }
 

@@ -141,7 +141,7 @@ export class ServerGame extends Game {
 			x = p.clientToServerX(x);
 			y = p.clientToServerY(y);
 
-			p.playCard(card, x, y);
+			p.S_playCardFromHand(card, x, y);
 		}
 
 		p.doneWithBlindStage = true;

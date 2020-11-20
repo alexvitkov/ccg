@@ -1,11 +1,10 @@
-import { game, rules } from './game';
-import { Card } from '../game_common';
+import { game, ClientCard, rules } from './game';
 
 const gameDiv = document.getElementById("game");
 const blindStageMessageDiv = document.getElementById('blindStageMessage');
 const readyButton: HTMLButtonElement = document.getElementById("readyButton") as any;
 readyButton.onclick = ready;
-gameDiv.onmouseup = _e => { if (draggedDiv) { stopDrag(true); } };
+gameDiv.onmouseup = _e => { if (draggedCard) { stopDrag(true); } };
 
 const myHandDiv = document.getElementById("myHand");
 const opponentHandDiv = document.getElementById("opponentHandDiv ");
@@ -18,8 +17,7 @@ export var fieldDivs: HTMLElement[] = [];
 // DRAGGING
 var isDraggedCardFromHand: boolean;
 var draggedCardPlaceholder: HTMLDivElement;
-var draggedDiv: HTMLDivElement = null;
-var draggedCard: Card = null;
+var draggedCard: ClientCard = null;
 var draggedDivOffsetX: number = 0;
 var draggedDivOffsetY: number = 0;
 
@@ -27,7 +25,7 @@ var draggedDivOffsetY: number = 0;
 // we store them here
 var handPlaceholders: {[cardId: number]: HTMLDivElement} = {};
 
-export function makeCardDiv(card: Card): HTMLDivElement {
+export function makeCardDiv(card: ClientCard): HTMLDivElement {
 	const cardDiv = document.createElement('div');
 	cardDiv.classList.add('card', card.owner == game.p1 ? 'mycard' : 'opponentcard' );
 
@@ -81,8 +79,7 @@ export function onGameStarted() {
 	}
 	// Populate the hand
 	for (const c of game.p1.hand) {
-		const cardDiv = makeCardDiv(c);
-		myHandDiv.appendChild(cardDiv);
+		myHandDiv.appendChild(c.div);
 	}
 
 	// We can move and play cards since we're in blind stage
@@ -90,9 +87,9 @@ export function onGameStarted() {
 	gameDiv.classList.add('canPlay');
 }
 
-function onCardDrag(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
+function onCardDrag(card: ClientCard, cardDiv: HTMLDivElement, event: MouseEvent) {
 	// not valid if we're currently dragging a card
-	if (draggedDiv || card.owner !== game.p1)
+	if (draggedCard || card.owner !== game.p1)
 		return;
 
 	const posInHand = game.p1.hand.indexOf(card);
@@ -100,19 +97,21 @@ function onCardDrag(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 		return false;
 	isDraggedCardFromHand = posInHand !== -1;
 
-	if (card.onBoard && !game.p1.canMoveAnyCard())
+	if (card.onBoard && !game.canMoveCards())
 		return false;
 
-	draggedDiv = cardDiv;
 	draggedCard = card;
-	draggedDivOffsetX = draggedDiv.getBoundingClientRect().left - event.clientX;
-	draggedDivOffsetY = draggedDiv.getBoundingClientRect().top - event.clientY + window.scrollY;
+	draggedDivOffsetX = draggedCard.div.getBoundingClientRect().left - event.clientX;
+	draggedDivOffsetY = draggedCard.div.getBoundingClientRect().top - event.clientY + window.scrollY;
 
-	const allowedSquares = game.p1.allowedMoveSquaresXY(card);
+	const allowedSquares = game.p1.C_allowedMoveSquaresXY(card);
 	for (const sq of allowedSquares)
 		fieldDivs[sq].classList.add('canDrop');
 	gameDiv.classList.add('dragging');
 	cardDiv.classList.add('dragged');
+
+	if (!isDraggedCardFromHand && game.stage === 'BlindStage')
+		myHandDiv.classList.add('canReturn');
 
 	draggedCardPlaceholder = document.createElement('div');
 	draggedCardPlaceholder.classList.add('placeholder');
@@ -124,27 +123,13 @@ function onCardDrag(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 	document.body.appendChild(cardDiv);
 	document.body.onmousemove = onMouseMove;
 	onMouseMove(event);
-
-	updateClasses();
 }
 
-// DEPRECATED this has to go
-function updateClasses() {
-	// if (game.p1.canMoveAnyCard())
-	// 	gameDiv.classList.add('canMove');
-	// else 
-	// 	gameDiv.classList.remove('canMove');
-
-	if (draggedDiv && ((draggedCard.x && game.stage === 'BlindStage') || isDraggedCardFromHand))
-		myHandDiv.classList.add('canReturn');
-	else
-		myHandDiv.classList.remove('canReturn');
-}
 
 
 function stopDrag(returnToPlaceholder: boolean) {
 	if (returnToPlaceholder) {
-		draggedCardPlaceholder.parentElement.insertBefore(draggedDiv, draggedCardPlaceholder);
+		draggedCardPlaceholder.parentElement.insertBefore(draggedCard.div, draggedCardPlaceholder);
 		draggedCardPlaceholder.remove();
 	}
 	// if we're dragging a card from the board (moving a card)
@@ -155,32 +140,30 @@ function stopDrag(returnToPlaceholder: boolean) {
 	for (const td of fieldDivs)
 		td.classList.remove('canDrop');
 
-	draggedDiv.classList.remove('dragged');
 	gameDiv.classList.remove('dragging');
-	draggedDiv.style.top = '';
-	draggedDiv.style.left = '';
-	draggedCardPlaceholder = null;
-	draggedDiv = null;
+	myHandDiv.classList.remove('canReturn');
+	draggedCard.div.classList.remove('dragged');
+	draggedCard.div.style.top = '';
+	draggedCard.div.style.left = '';
 	draggedCard = null;
-	updateClasses();
+	draggedCardPlaceholder = null;
+	
 }
 
 function onDropOnGrid(x: number, y: number) {
-	if (!draggedDiv)
+	if (!draggedCard)
 		return;
 
 	// We're dragigng a card from the hand, aka playing
 	if (isDraggedCardFromHand) {
-		if (game.p1.playCard(draggedCard, x, y)) {
+		if (game.p1.S_playCardFromHand(draggedCard, x, y)) {
 			stopDrag(false); 
-			updateClasses();
 			return;
 		}
 	}
 	// We're a dragging a card from the board
-	else if (game.p1.moveCard(draggedCard, x, y)) {
+	else if (game.putCard(x, y, draggedCard)) {
 		stopDrag(false);
-		updateClasses();
 		return;
 	}
 
@@ -188,7 +171,7 @@ function onDropOnGrid(x: number, y: number) {
 }
 
 myHandDiv.onmouseup = _e => {
-	if (draggedDiv) {
+	if (draggedCard) {
 		// if the card we're dragging is from hand, just return it
 		if (isDraggedCardFromHand) {
 			stopDrag(true);
@@ -205,7 +188,7 @@ myHandDiv.onmouseup = _e => {
 
 			game.p1.returnCard(draggedCard, prevCard);
 
-			placeholder.parentElement.insertBefore(draggedDiv, placeholder);
+			placeholder.parentElement.insertBefore(draggedCard.div, placeholder);
 			placeholder.parentElement.removeChild(placeholder);
 
 			delete handPlaceholders[draggedCard.id];
@@ -216,9 +199,9 @@ myHandDiv.onmouseup = _e => {
 }
 
 function onMouseMove(event: MouseEvent) {
-	if (draggedDiv) {
-		draggedDiv.style.top = (event.clientY + draggedDivOffsetY) + 'px';
-		draggedDiv.style.left = (event.clientX + draggedDivOffsetX) + 'px';
+	if (draggedCard) {
+		draggedCard.div.style.top = (event.clientY + draggedDivOffsetY) + 'px';
+		draggedCard.div.style.left = (event.clientX + draggedDivOffsetX) + 'px';
 	}
 }
 

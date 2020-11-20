@@ -51,21 +51,17 @@ export class Player {
 	game: Game;
 	hand: Card[];
 
-	canMoveAnyCard(): boolean {
-		return this.game.stage === 'BlindStage';
-	}
-
-	canMoveCard(card: Card, x: number, y: number) : boolean {
+	C_canMoveCard(card: Card, x: number, y: number) : boolean {
 		if (card.owner !== this || !card.onBoard)
 			return false;
 		if (this.game.stage === 'BlindStage' && y >= this.game.rules.ownHeight)
 			return false;
 		if (this.game.getBoard(x, y))
 			return false;
-		return true;
+		return this.game.stage === 'BlindStage';
 	}
 
-	allowedMoveSquaresXY(card: Card): number[] {
+	C_allowedMoveSquaresXY(card: Card): number[] {
 		const squares = [];
 		if (!card.onBoard || this.game.stage === 'BlindStage') {
 			for (let y = 0; y < this.game.rules.ownHeight; y++)
@@ -79,15 +75,14 @@ export class Player {
 		return Object.values(this.game._board).filter(c => c.owner === this);
 	}
 
-	playCard(card: Card, x: number, y: number): boolean {
+	// returns false only if card not in hand or board position taken
+	S_playCardFromHand(card: Card, x: number, y: number): boolean {
 		const posInHand = this.hand.indexOf(card);
-		if (posInHand === -1 || this.game.getBoard(x, y))
+		if (posInHand === -1)
 			return false;
 
 		this.hand.splice(posInHand, 1);
-		this.game.putCard(x, y, card);
-		this.recalculateStrength();
-		return true;
+		return this.game.putCard(x, y, card);
 	}
 
 	get strength(): number {
@@ -97,18 +92,6 @@ export class Player {
 		}
 		return str;
 	}
-
-	// abstract
-	recalculateStrength() {
- 	}
-
-	moveCard(card: Card, x: number, y: number): boolean {
-		if (!this.canMoveCard(card, x, y))
-			return false;
-		this.game.putCard(x, y, card);
-		return true;
-	}
-
 }
 
 export type Stage = 'BlindStage' | 'Play' | 'Active' | 'Move';
@@ -138,11 +121,14 @@ export class Game {
 		card.x = -1;
 	}
 
-	putCard(x: number, y: number, card: Card) {
+	putCard(x: number, y: number, card: Card): boolean {
+		if (this.getBoard(x, y))
+			return false;
 		this.liftCard(card);
 		this._board[y * this.rules.boardWidth + x] = card;
 		card.x = x;
 		card.y = y;
+		return true;
 	}
 
 	constructor(rules: GameRules) {
