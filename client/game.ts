@@ -24,6 +24,7 @@ export class ClientCard extends Card {
 	takeDamage(damage: number) {
 		super.takeDamage(damage);
 		(this.div.getElementsByClassName('strength')[0] as HTMLElement).innerText = this.strength.toString();
+		this.owner.recalculateStrength();
 	}
 }
 

@@ -2,7 +2,6 @@ import { Session } from './session';
 import { Card, CardProto, GameRules, Game, Player } from '../game_common';
 import { GameStartedMessage, DoneWithBlindStageMessage, BlindStageOverMessage } from '../messages';
 import { Message } from '../messages';
-import * as actives from '../actives';
 
 export const ruleset: GameRules = {
 	boardWidth: 7,
@@ -11,9 +10,9 @@ export const ruleset: GameRules = {
 	startingHandSize: 10,
 	blindStageUnits: 3,
 	cardSet: [
-		new CardProto(0, 'Bomber', 'ACTIVE: Deal 4 damage to all units in a 3x3 square around the bomber', 3, 'BOMB', 'bomberActive'),
-		new CardProto(1, 'Healer', 'SOT: Heal all the nearest units for 1', 3, 'HEAL', null, 'healerPassive'),
-		new CardProto(2, 'Gunner', 'EOT: Fire a bullet dealing 1 damage.', 4, 'GUN'),
+		new CardProto(0, 'Bomber', 'ACTIVE: Deal 5 damage to all units in a 3x3 square around the bomber', 4, 'BOMB', 'bomberActive'),
+		new CardProto(1, 'Healer', 'SOT: Heal all the nearest units for 1', 4, 'HEAL', null, 'healerPassive'),
+		new CardProto(2, 'Gunner', 'EOT: Fire a bullet dealing 1 damage.', 6, 'GUN', 'gunnerActive', null, 'gunnerPassive'),
 	],
 	minDeckSize: 20,
 	maxDeckSize: 30,

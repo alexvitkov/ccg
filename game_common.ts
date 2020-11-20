@@ -1,5 +1,4 @@
-import { actives } from './actives';
-import { passives, Passive } from './passive';
+import { effects, Effect } from './effects';
 
 export class CardProto {
 	cardID: number;
@@ -57,11 +56,11 @@ export class Card {
 		this.x = -1;
 		this.y = -1;
 		if (proto.active)
-			this.active = () => { actives[proto.active](this.owner.game, this); }
+			this.active = () => { effects[proto.active](this.owner.game, this); }
 		if (proto.sot)
-			this.sot = () => { passives[proto.sot](this.owner.game, this); }
+			this.sot = () => { effects[proto.sot](this.owner.game, this); }
 		if (proto.eot)
-			this.eot = () => { passives[proto.sot](this.owner.game, this); }
+			this.eot = () => { effects[proto.eot](this.owner.game, this); }
 	}
 }
 
@@ -237,10 +236,9 @@ export class Game {
 				if (this.turn.movePoints > this.rules.maxMovePoints)
 					this.turn.movePoints = this.rules.maxMovePoints;
 
-				//this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
-				for (const e of this.turn.sot) {
+				this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
+				for (const e of this.turn.sot)
 					e.effect();
-				}
 				break;
 		}
 	}
@@ -267,7 +265,7 @@ export class Game {
 			if (card.sot)
 				card.owner.sot.push({card: card, effect: card.sot});
 			if (card.eot)
-				card.owner.eot.push({card: card, effect: card.sot});
+				card.owner.eot.push({card: card, effect: card.eot});
 		}
 		const xy = this._xy(card.x, card.y);
 		delete this._board[xy];
