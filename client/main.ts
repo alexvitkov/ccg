@@ -1,6 +1,6 @@
 import { handleLobbyMessage, refreshLobbies } from './lobby';
 import { game, ClientGame } from './game';
-import { onGameStarted } from './gameHtml';
+import { set, onGameStarted } from './gameHtml';
 import  * as messages from '../messages';
 
 var ws: WebSocket;
@@ -41,6 +41,10 @@ function handleMessage(msg: messages.Message): boolean {
 		case 'opponentMovedCard': {
 			const { id, x, y } = msg;
 			game.putCard(x, y, game.cards[id]);
+			game.p2.movePoints -= 1;
+			if (game.p2.movePoints == 0)
+				game.nextStage();
+			set('enemyMovePoints', game.p2.movePoints.toString());
 			break;
 		}
 		case 'nextStage': {

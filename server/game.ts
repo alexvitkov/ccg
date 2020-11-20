@@ -16,6 +16,9 @@ export const ruleset: GameRules = {
 	],
 	minDeckSize: 20,
 	maxDeckSize: 30,
+
+	movePointsPerTurn: 2,
+	maxMovePoints: 5,
 }
 
 class ServerPlayer extends Player {
@@ -81,12 +84,14 @@ export class ServerGame extends Game {
 		return card;
 	}
 
-	nextStage() {
-		const playerToNotify = this.otherPlayer(this.turn) as ServerPlayer;
-		super.nextStage();
-		playerToNotify.send({
-			message: 'nextStage'
-		});
+	nextStage(skipNotify?: boolean) {
+		if (!skipNotify) {
+			const playerToNotify = this.otherPlayer(this.turn) as ServerPlayer;
+			playerToNotify.send({
+				message: 'nextStage'
+			});
+		}
+		super.nextStage(); // this comes after sending the message
 	}
 
 	handleGameWsMessage(session: Session, message: Message) {
@@ -99,13 +104,13 @@ export class ServerGame extends Game {
 			}
 			case 'playCard':
 				this.handlePlayCard(p, message);
-				return true;
+			return true;
 			case 'moveCard':
 				this.handleMoveCard(p, message);
-				return true;
+			return true;
 			case 'skip':
 				this.handleSkip(p, message);
-				return true;
+			return true;
 		}
 	}
 
@@ -136,6 +141,11 @@ export class ServerGame extends Game {
 			x: otherPlayer.clientToServerX(x),
 			y: otherPlayer.clientToServerY(y),
 		});
+
+		// we don't notify the client for this, they can infer it
+		this.turn.movePoints -= 1;
+		if (this.turn.movePoints === 0)
+			this.nextStage(true); 
 		return true;
 	}
 
@@ -177,45 +187,45 @@ export class ServerGame extends Game {
 		// Validate the message
 		if (this.stage !== 'BlindStage' 
 			|| !Array.isArray(msg.played) 
-			|| msg.played.length > this.rules.blindStageUnits)
-			return false;
-
-		const takenxy = [];
-		for (const cardInfo of msg.played) {
-			let [id, x, y] = cardInfo;
-			if (typeof id !== 'number' || !this.coordinatesValid(x, y))
+				|| msg.played.length > this.rules.blindStageUnits)
 				return false;
 
-			const card = this.cards[id];
-			x = p.clientToServerX(x);
-			y = p.clientToServerY(y);
+				const takenxy = [];
+				for (const cardInfo of msg.played) {
+					let [id, x, y] = cardInfo;
+					if (typeof id !== 'number' || !this.coordinatesValid(x, y))
+						return false;
 
-			if (!p.S_canPlayCardFromHand(x, y, card))
-				return false;
+					const card = this.cards[id];
+					x = p.clientToServerX(x);
+					y = p.clientToServerY(y);
 
-			// Make sure there aren't two cards with the same coords
-			// from the ones the player wants to play
-			const xy = this._xy(x, y);
-			if (takenxy.indexOf(xy) !== -1)
-				return false;
-			takenxy.push(xy);
-		}
+					if (!p.S_canPlayCardFromHand(x, y, card))
+						return false;
 
-		for (const cardInfo of msg.played) {
-			let [id, x, y] = cardInfo;
-			const card = this.cards[id];
+					// Make sure there aren't two cards with the same coords
+					// from the ones the player wants to play
+					const xy = this._xy(x, y);
+					if (takenxy.indexOf(xy) !== -1)
+						return false;
+					takenxy.push(xy);
+				}
 
-			x = p.clientToServerX(x);
-			y = p.clientToServerY(y);
+				for (const cardInfo of msg.played) {
+					let [id, x, y] = cardInfo;
+					const card = this.cards[id];
 
-			p.S_playCardFromHand(x, y, card);
-		}
+					x = p.clientToServerX(x);
+					y = p.clientToServerY(y);
 
-		p.doneWithBlindStage = true;
-		if ((this.otherPlayer(p) as ServerPlayer).doneWithBlindStage)
-			this.blindStageOver();
+					p.S_playCardFromHand(x, y, card);
+				}
 
-		return true;
+				p.doneWithBlindStage = true;
+				if ((this.otherPlayer(p) as ServerPlayer).doneWithBlindStage)
+					this.blindStageOver();
+
+				return true;
 	}
 
 	blindStageOver() {

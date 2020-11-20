@@ -46,12 +46,20 @@ export class ClientPlayer extends Player {
 			return false;
 		this.game.putCard(x, y, card);
 
-		send({
-			message: 'moveCard',
-			id: card.id,
-			x: x,
-			y: y
-		});
+		if (this.game.stage === 'Move') {
+			this.movePoints -= 1;
+			set('myMovePoints', this.movePoints.toString());
+			if (this.movePoints == 0) {
+				game.nextStage();
+			}
+			send({
+				message: 'moveCard',
+				id: card.id,
+				x: x,
+				y: y
+			});
+		}
+
 		return true;
 	}
 

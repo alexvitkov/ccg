@@ -42,6 +42,8 @@ export class GameRules {
 	startingHandSize: number;
 	blindStageUnits: number;
 	cardSet: CardProto[];
+	movePointsPerTurn: number;
+	maxMovePoints: number;
 
 	minDeckSize: number;
 	maxDeckSize: number;
@@ -51,10 +53,12 @@ export class Player {
 	game: Game;
 	hand: Card[];
 	isPlayer2: boolean;
+	movePoints: number;
 
 	constructor(game: Game, isPlayer2: boolean) {
 		this.game = game;
 		this.isPlayer2 = isPlayer2;
+		this.movePoints = game.rules.movePointsPerTurn;
 	}
 
 	getUnits() {
@@ -114,8 +118,8 @@ export class Player {
 			return true;
 		}
 
-		// if we're not in blind stage, we can only move in our move stage
-		if (this.game.stage !== 'Move' || this.game.turn !== this)
+		// if we're not in blind stage, we can only move in our move stage and if we have points
+		if (this.game.stage !== 'Move' || this.game.turn !== this || this.movePoints <= 0)
 			return false;
 
 		// we can move cards by one field horizontally or vertically
@@ -176,6 +180,9 @@ export class Game {
 			case 'Move': {
 				this.stage = 'Play';
 				this.turn = this.otherPlayer(this.turn);
+				this.turn.movePoints += this.rules.movePointsPerTurn;
+				if (this.turn.movePoints > this.rules.maxMovePoints)
+					this.turn.movePoints = this.rules.maxMovePoints;
 				this
 				break;
 			}

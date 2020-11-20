@@ -53,6 +53,8 @@ export function onGameStarted() {
 	(document.getElementById("lobbies") as HTMLElement).style.display = 'none';
 	gameDiv.style.display = 'grid';
 
+	set('maxMovePoints', game.rules.maxMovePoints.toString());
+
 	// Populate the board grid
 	var last = document.getElementById('game').firstChild;
 	fieldDivs = new Array(rules.boardWidth * rules.boardHeight);
@@ -251,4 +253,7 @@ export function stageChanged() {
 			break;
 		}
 	}
+
+	set('myMovePoints', game.p1.movePoints.toString());
+	set('enemyMovePoints', game.p2.movePoints.toString());
 }
