@@ -51,12 +51,6 @@ export class Player {
 	game: Game;
 	hand: Card[];
 
-	canPlayAnyCard() : boolean {
-		if (this.game.stage === 'BlindStage')
-			return this.getUnits().length < this.game.rules.blindStageUnits;
-		return false;
-	}
-
 	canMoveAnyCard(): boolean {
 		return this.game.stage === 'BlindStage';
 	}
@@ -85,31 +79,9 @@ export class Player {
 		return Object.values(this.game._board).filter(c => c.owner === this);
 	}
 
-	// Assuming canPlayCard === true
-	// DEPRECATED
-	// This is used in the client, does a check for ownHeight
-	// when replaced with the new one, make sure to not foget the other one
-	// does no check for ownHeight
-	playCard(posInHand: number, x: number, y: number): boolean {
-		const card = this.hand[posInHand];
-		if (!card || y >= this.game.rules.ownHeight)
-			return false;
-		if (this.game.getBoard(x, y))
-			return false;
-
-		this.hand.splice(posInHand, 1);
-		this.game.putCard(x, y, card);
-		this.recalculateStrength();
-		return true;
-	}
-
-	// Assuming canPlayCard === true
-	playCard2(card: Card, x: number, y: number): boolean {
+	playCard(card: Card, x: number, y: number): boolean {
 		const posInHand = this.hand.indexOf(card);
-		if (posInHand === -1)
-			return false;
-
-		if (this.game.getBoard(x, y))
+		if (posInHand === -1 || this.game.getBoard(x, y))
 			return false;
 
 		this.hand.splice(posInHand, 1);

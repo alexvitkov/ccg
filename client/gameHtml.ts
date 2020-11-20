@@ -10,20 +10,24 @@ gameDiv.onmouseup = _e => { if (draggedDiv) { stopDrag(true); } };
 const myHandDiv = document.getElementById("myHand");
 const opponentHandDiv = document.getElementById("opponentHandDiv ");
 
-const lobbiesDiv = document.getElementById("lobbies");
 
-var boardTd: HTMLElement[] = [];
+// list of field divs on the board, addressded via xy
+// fieldDivs[game._xy(x, y)]
+export var fieldDivs: HTMLElement[] = [];
 
 // DRAGGING
-var draggedCardPosInHand: number;
+var isDraggedCardFromHand: boolean;
 var draggedCardPlaceholder: HTMLDivElement;
 var draggedDiv: HTMLDivElement = null;
 var draggedCard: Card = null;
 var draggedDivOffsetX: number = 0;
 var draggedDivOffsetY: number = 0;
+
+// when in blind stage, there are multiple placeholders.
+// we store them here
 var handPlaceholders: {[cardId: number]: HTMLDivElement} = {};
 
-export function makeCardDiv(card: Card, x?: number, y?: number): HTMLDivElement {
+export function makeCardDiv(card: Card): HTMLDivElement {
 	const cardDiv = document.createElement('div');
 	cardDiv.classList.add('card', card.owner == game.p1 ? 'mycard' : 'opponentcard' );
 
@@ -42,28 +46,24 @@ export function makeCardDiv(card: Card, x?: number, y?: number): HTMLDivElement 
 	cardDiv.appendChild(text);
 	cardDiv.appendChild(strength);
 
-	if (typeof x === 'number' && typeof y === 'number') {
-		const xy = game._xy(x, y);
-		boardTd[xy].appendChild(cardDiv);
-	}
-
 	return cardDiv;
 }
 
 export function onGameStarted() {
-	lobbiesDiv.style.display = 'none';
-	lobbiesDiv.style.display = 'none';
+	// hide the lobby screen and show the game
+	(document.getElementById("lobbies") as HTMLElement).style.display = 'none';
 	gameDiv.style.display = 'grid';
+
 	// Populate the board grid
 	var last = document.getElementById('game').firstChild;
-	boardTd = new Array(rules.boardWidth * rules.boardHeight);
+	fieldDivs = new Array(rules.boardWidth * rules.boardHeight);
 
 	for (let y = rules.boardHeight - 1; y >= 0; y--) {
 		for (let x = 0; x < rules.boardWidth; x++) {
 			const td = document.createElement('div');
 			td.setAttribute('data-x', x.toString());
 			td.setAttribute('data-y', y.toString());
-			boardTd[y * rules.boardWidth + x] = td;
+			fieldDivs[y * rules.boardWidth + x] = td;
 			last.parentNode.insertBefore(td, last.nextSibling);
 			last = td;
 
@@ -84,7 +84,10 @@ export function onGameStarted() {
 		const cardDiv = makeCardDiv(c);
 		myHandDiv.appendChild(cardDiv);
 	}
-	update();
+
+	// We can move and play cards since we're in blind stage
+	gameDiv.classList.add('canMove');
+	gameDiv.classList.add('canPlay');
 }
 
 function onCardDrag(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
@@ -93,8 +96,9 @@ function onCardDrag(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 		return;
 
 	const posInHand = game.p1.hand.indexOf(card);
-	if (posInHand !== -1 && !game.p1.canPlayAnyCard())
+	if (posInHand !== -1 && !game.canPlayCards())
 		return false;
+	isDraggedCardFromHand = posInHand !== -1;
 
 	if (card.onBoard && !game.p1.canMoveAnyCard())
 		return false;
@@ -103,18 +107,17 @@ function onCardDrag(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 	draggedCard = card;
 	draggedDivOffsetX = draggedDiv.getBoundingClientRect().left - event.clientX;
 	draggedDivOffsetY = draggedDiv.getBoundingClientRect().top - event.clientY + window.scrollY;
-	draggedCardPosInHand = posInHand;
 
 	const allowedSquares = game.p1.allowedMoveSquaresXY(card);
 	for (const sq of allowedSquares)
-		boardTd[sq].classList.add('canDrop');
+		fieldDivs[sq].classList.add('canDrop');
 	gameDiv.classList.add('dragging');
 	cardDiv.classList.add('dragged');
 
 	draggedCardPlaceholder = document.createElement('div');
 	draggedCardPlaceholder.classList.add('placeholder');
 
-	if (isDraggedCardFromHand())
+	if (isDraggedCardFromHand)
 		handPlaceholders[card.id] = draggedCardPlaceholder;
 	cardDiv.parentElement.insertBefore(draggedCardPlaceholder, cardDiv);
 
@@ -122,21 +125,17 @@ function onCardDrag(card: Card, cardDiv: HTMLDivElement, event: MouseEvent) {
 	document.body.onmousemove = onMouseMove;
 	onMouseMove(event);
 
-	update();
+	updateClasses();
 }
 
-function update() {
-	if (game.p1.canPlayAnyCard())
-		myHandDiv.classList.add('canPlay');
-	else
-		myHandDiv.classList.remove('canPlay');
+// DEPRECATED this has to go
+function updateClasses() {
+	// if (game.p1.canMoveAnyCard())
+	// 	gameDiv.classList.add('canMove');
+	// else 
+	// 	gameDiv.classList.remove('canMove');
 
-	if (game.p1.canMoveAnyCard())
-		gameDiv.classList.add('canMove');
-	else 
-		gameDiv.classList.remove('canMove');
-
-	if (draggedDiv && ((draggedCard.x && game.stage === 'BlindStage') || isDraggedCardFromHand()))
+	if (draggedDiv && ((draggedCard.x && game.stage === 'BlindStage') || isDraggedCardFromHand))
 		myHandDiv.classList.add('canReturn');
 	else
 		myHandDiv.classList.remove('canReturn');
@@ -148,10 +147,12 @@ function stopDrag(returnToPlaceholder: boolean) {
 		draggedCardPlaceholder.parentElement.insertBefore(draggedDiv, draggedCardPlaceholder);
 		draggedCardPlaceholder.remove();
 	}
-	if (!isDraggedCardFromHand() && draggedCardPlaceholder) {
+	// if we're dragging a card from the board (moving a card)
+	// delete the placeholder
+	else if (!isDraggedCardFromHand && draggedCardPlaceholder) {
 		draggedCardPlaceholder.remove();
 	}
-	for (const td of boardTd)
+	for (const td of fieldDivs)
 		td.classList.remove('canDrop');
 
 	draggedDiv.classList.remove('dragged');
@@ -161,45 +162,38 @@ function stopDrag(returnToPlaceholder: boolean) {
 	draggedCardPlaceholder = null;
 	draggedDiv = null;
 	draggedCard = null;
-
-	update();
-}
-
-function isDraggedCardFromHand() {
-	return draggedCardPosInHand !== -1;
+	updateClasses();
 }
 
 function onDropOnGrid(x: number, y: number) {
-	if (draggedDiv) {
-		if (isDraggedCardFromHand()) {
-			if (game.p1.playCard(draggedCardPosInHand, x, y)) {
-				boardTd[game._xy(x, y)].appendChild(draggedDiv);
-				stopDrag(false); update();
-			}
-			else {
-				stopDrag(true);
-			}
-		}
-		else {
-			if (!game.p1.moveCard(draggedCard, x, y)) {
-				stopDrag(true);
-			}
-			else {
-				boardTd[game._xy(x, y)].appendChild(draggedDiv);
-				stopDrag(false);
-				update();
-			}
+	if (!draggedDiv)
+		return;
+
+	// We're dragigng a card from the hand, aka playing
+	if (isDraggedCardFromHand) {
+		if (game.p1.playCard(draggedCard, x, y)) {
+			stopDrag(false); 
+			updateClasses();
+			return;
 		}
 	}
+	// We're a dragging a card from the board
+	else if (game.p1.moveCard(draggedCard, x, y)) {
+		stopDrag(false);
+		updateClasses();
+		return;
+	}
+
+	stopDrag(true);
 }
 
 myHandDiv.onmouseup = _e => {
 	if (draggedDiv) {
-		// if currentlyDraggingCard is from hand, just return it
-		if (isDraggedCardFromHand()) {
+		// if the card we're dragging is from hand, just return it
+		if (isDraggedCardFromHand) {
 			stopDrag(true);
 		}
-		// Can only return cards if blindstage
+		// Can only return cards from board if blindstage
 		else if (game.stage === 'BlindStage') {
 			const placeholder = handPlaceholders[draggedCard.id];
 			var prevCardDiv: Element = placeholder;
@@ -223,8 +217,6 @@ myHandDiv.onmouseup = _e => {
 
 function onMouseMove(event: MouseEvent) {
 	if (draggedDiv) {
-		const card = game.cards[parseInt(draggedDiv.getAttribute('data-id'))];
-		draggedCardPosInHand = game.p1.hand.indexOf(card);
 		draggedDiv.style.top = (event.clientY + draggedDivOffsetY) + 'px';
 		draggedDiv.style.left = (event.clientX + draggedDivOffsetX) + 'px';
 	}

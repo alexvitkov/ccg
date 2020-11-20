@@ -100,8 +100,11 @@ export class ServerGame extends Game {
 
 	onPlayerDoneWithBlindStage(p: ServerPlayer, msg: DoneWithBlindStageMessage): boolean {
 		// Validate the message
-		if (this.stage !== 'BlindStage' || !Array.isArray(msg.played))
+		if (this.stage !== 'BlindStage' 
+			|| !Array.isArray(msg.played) 
+			|| msg.played.length > this.rules.blindStageUnits)
 			return false;
+
 		const takenxy = [];
 		for (const cardInfo of msg.played) {
 			let [id, x, y] = cardInfo;
@@ -138,14 +141,13 @@ export class ServerGame extends Game {
 			x = p.clientToServerX(x);
 			y = p.clientToServerY(y);
 
-			if (!p.playCard2(card, x, y))
-				console.log('///')
+			p.playCard(card, x, y);
 		}
 
 		p.doneWithBlindStage = true;
-		if (this.otherPlayer(p).doneWithBlindStage) {
+		if (this.otherPlayer(p).doneWithBlindStage)
 			this.blindStageOver();
-		}
+
 		return true;
 	}
 

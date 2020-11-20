@@ -1,11 +1,19 @@
 import * as messages from '../messages';
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
-import { set, blindStageOver, makeCardDiv } from './gameHtml';
+import { set, blindStageOver, makeCardDiv, fieldDivs } from './gameHtml';
 import { send } from './main';
 
 export var game: ClientGame;
 export var rules: GameRules;
 
+export class ClientCard extends Card {
+	div: HTMLDivElement;
+	
+	constructor(id: number, owner: Player, proto: CardProto) {
+		super(id, owner, proto);
+		this.div = makeCardDiv(this);
+	}
+}
 
 export class ClientPlayer extends Player {
 	game: Game;
@@ -46,7 +54,7 @@ export class ClientGame extends Game {
 	}
 
 	instantiate(id: number, owner: Player, proto: CardProto) {
-		const card = new Card(id, owner, proto);
+		const card = new ClientCard(id, owner, proto);
 		this.cards[id] = card;
 		return card;
 	}
@@ -62,9 +70,18 @@ export class ClientGame extends Game {
 		for (const [id, cardID, x, y] of msg.otherPlayerPlayed) {
 		 	const card = this.instantiate(id, this.p2, this.rules.cardSet[cardID]);
 			this.putCard(x, y, card);
-			makeCardDiv(card, x, y);
 		}
 		blindStageOver();
+	}
+
+	putCard(x: number, y: number, card: ClientCard) {
+		fieldDivs[this._xy(x, y)].appendChild(card.div);
+		super.putCard(x, y, card);
+	}
+
+	canPlayCards() {
+		return this.stage === 'BlindStage' 
+			&& this.p1.getUnits().length < this.rules.blindStageUnits;
 	}
 }
 
