@@ -2,6 +2,7 @@ import { Session } from './session';
 import { Card, CardProto, GameRules, Game, Player } from '../game_common';
 import { GameStartedMessage, DoneWithBlindStageMessage, BlindStageOverMessage } from '../messages';
 import { Message } from '../messages';
+import * as actives from '../actives';
 
 export const ruleset: GameRules = {
 	boardWidth: 7,
@@ -10,7 +11,7 @@ export const ruleset: GameRules = {
 	startingHandSize: 10,
 	blindStageUnits: 3,
 	cardSet: [
-		new CardProto(0, 'Bomber', 4, 'BOMB'),
+		new CardProto(0, 'Bomber', 4, 'BOMB', 'bomberActive'),
 		new CardProto(1, 'Healer', 3, 'HEAL'),
 		new CardProto(2, 'Gunner', 3, 'GUN'),
 	],
@@ -84,16 +85,6 @@ export class ServerGame extends Game {
 		return card;
 	}
 
-	nextStage(skipNotify?: boolean) {
-		if (!skipNotify) {
-			const playerToNotify = this.otherPlayer(this.turn) as ServerPlayer;
-			playerToNotify.send({
-				message: 'nextStage'
-			});
-		}
-		super.nextStage(); // this comes after sending the message
-	}
-
 	handleGameWsMessage(session: Session, message: Message) {
 		const p = session === this.p1.session ? this.p1 : this.p2;
 
@@ -102,15 +93,26 @@ export class ServerGame extends Game {
 				this.onPlayerDoneWithBlindStage(p, message as DoneWithBlindStageMessage);
 				return true;
 			}
-			case 'playCard':
-				this.handlePlayCard(p, message);
-			return true;
-			case 'moveCard':
-				this.handleMoveCard(p, message);
-			return true;
-			case 'skip':
-				this.handleSkip(p, message);
-			return true;
+			case 'playCard': {
+				if (!this.handlePlayCard(p, message))
+					console.log('handlePlayCard fail');
+				return true;
+			}
+			case 'moveCard': {
+				if (!this.handleMoveCard(p, message))
+					console.log('handleMoveCard fail');
+				return true;
+			}
+			case 'skip': {
+				if (!this.handleSkip(p, message))
+					console.log('handleSkip fail');
+				return true;
+			}
+			case 'active': {
+				if (!this.handleActive(p, message))
+					console.log('handleActive fail');
+				return true;
+			}
 		}
 	}
 
@@ -145,14 +147,19 @@ export class ServerGame extends Game {
 		// we don't notify the client for this, they can infer it
 		this.turn.movePoints -= 1;
 		if (this.turn.movePoints === 0)
-			this.nextStage(true); 
+			this.nextStage(); 
 		return true;
 	}
 
 	handleSkip(p: ServerPlayer, _msg: Message) {
 		if (this.turn !== p)
 			return false;
+		const playerToNotify = this.otherPlayer(this.turn) as ServerPlayer;
+		playerToNotify.send({
+			message: 'nextStage'
+		});
 		this.nextStage();
+		return true;
 	}
 
 	handlePlayCard(p: ServerPlayer, msg: Message): boolean {
@@ -181,6 +188,21 @@ export class ServerGame extends Game {
 			y: otherPlayer.clientToServerY(y),
 		});
 		this.nextStage();
+		return true;
+	}
+
+	handleActive(p: ServerPlayer, msg: Message): boolean {
+		if (typeof msg.id !== 'number')
+			return false;
+		const card = this.cards[msg.id];
+		if (card && p.active(card)) {
+			(this.otherPlayer(p) as ServerPlayer).send({
+				message: 'active',
+				id: card.id
+			});
+			return true;
+		}
+		return false;
 	}
 
 	onPlayerDoneWithBlindStage(p: ServerPlayer, msg: DoneWithBlindStageMessage): boolean {

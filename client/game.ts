@@ -14,15 +14,25 @@ export class ClientCard extends Card {
 		super(id, owner, proto);
 		this.div = makeCardDiv(this);
 	}
+
+	die() {
+		super.die();
+		this.div.remove();
+		this.owner.recalculateStrength();
+	}
+
+	takeDamage(damage: number) {
+		super.takeDamage(damage);
+		(this.div.getElementsByClassName('strength')[0] as HTMLElement).innerText = this.strength.toString();
+	}
 }
 
 export class ClientPlayer extends Player {
-	game: Game;
+	game: ClientGame;
 	hand: ClientCard[];
 
-	constructor(game: Game, isPlayer2: boolean) {
+	constructor(game: ClientGame, isPlayer2: boolean) {
 		super(game, isPlayer2);
-		this.game = game;
 	}
 
 	S_playCardFromHand(x: number, y: number, card: ClientCard): boolean {

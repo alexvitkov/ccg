@@ -41,6 +41,14 @@ export function makeCardDiv(card: ClientCard): HTMLDivElement {
 	cardDiv.setAttribute('data-id', card.id.toString());
 
 	cardDiv.onmousedown = e => onCardDrag(card, cardDiv, e);
+	cardDiv.onclick = () => {
+		if (game.p1.active(card)) {
+			send({
+				message: 'active',
+				id: card.id,
+			});
+		}
+	};
 
 	cardDiv.appendChild(text);
 	cardDiv.appendChild(strength);

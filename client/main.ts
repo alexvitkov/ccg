@@ -36,6 +36,7 @@ function handleMessage(msg: messages.Message): boolean {
 			const { id, cardID, x, y } = msg;
 			game.instantiate(id, game.p2, game.rules.cardSet[cardID]);
 			game.putCard(x, y, game.cards[id]);
+			game.nextStage();
 			break;
 		}
 		case 'opponentMovedCard': {
@@ -51,6 +52,11 @@ function handleMessage(msg: messages.Message): boolean {
 			game.nextStage();
 			break;
 		}
+		case 'active': {
+			game.p2.active(game.cards[msg.id]);
+			break;
+		}
+
 	}
 	return handleLobbyMessage(msg);
 }

@@ -1,15 +1,19 @@
+import { actives } from './actives';
+
 export class CardProto {
 	cardID: number;
 	cardName: string;
 	baseStrength: number;
 
+	active: string;
 	cardLetter: string;
 
-	constructor(cardID: number, cardName: string, baseStrength: number, cardLetter: string) {
+	constructor(cardID: number, cardName: string, baseStrength: number, cardLetter: string, active?: string) {
 		this.cardID=cardID;
 		this.cardName=cardName;
 		this.baseStrength=baseStrength;
 		this.cardLetter=cardLetter;
+		this.active = active;
 	}
 }
 
@@ -20,9 +24,20 @@ export class Card {
 	strength: number;
 	x: number;
 	y: number;
+	active: () => void;
 
 	get onBoard() {
 		return this.x >= 0;
+	}
+
+	die() {
+		this.owner.game.liftCard(this);
+	}
+
+	takeDamage(damage: number) {
+		this.strength -= damage;
+		if (this.strength <= 0)
+			this.die();
 	}
 
 	constructor(id: number, owner: Player, proto: CardProto) {
@@ -32,6 +47,8 @@ export class Card {
 		this.strength = proto.baseStrength;
 		this.x = -1;
 		this.y = -1;
+		if (proto.active)
+			this.active = () => { actives[proto.active](this.owner.game, this); }
 	}
 }
 
@@ -59,6 +76,17 @@ export class Player {
 		this.game = game;
 		this.isPlayer2 = isPlayer2;
 		this.movePoints = game.rules.movePointsPerTurn;
+	}
+
+	active(card: Card): boolean {
+		if (card.active && card.owner === this && card.onBoard 
+			&& this.game.stage === 'Active' && this.game.turn === this)
+		{
+			card.active();
+			this.game.nextStage();
+			return true;
+		}
+		return false;
 	}
 
 	getUnits() {
