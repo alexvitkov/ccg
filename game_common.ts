@@ -83,14 +83,16 @@ export class Player {
 	hand: Card[];
 	isPlayer2: boolean;
 	movePoints: number;
+	fatigue: number;
 
 	sot: { card: Card, effect: () => void }[] = [];
 	eot: { card: Card, effect: () => void }[] = [];
 
 	constructor(game: Game, isPlayer2: boolean) {
 		this.game = game;
-		this.isPlayer2 = isPlayer2;
+		this.fatigue = 1;
 		this.movePoints = 0;
+		this.isPlayer2 = isPlayer2;
 	}
 
 	active(card: Card): boolean {

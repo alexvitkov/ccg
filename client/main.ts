@@ -56,6 +56,12 @@ function handleMessage(msg: messages.Message): boolean {
 			game.p2.active(game.cards[msg.id]);
 			break;
 		}
+		case 'fatigue': {
+			const unit = game.cards[msg.id];
+			unit.takeDamage(unit.owner.fatigue);
+			unit.owner.fatigue++;
+			break;
+		}
 
 	}
 	return handleLobbyMessage(msg);

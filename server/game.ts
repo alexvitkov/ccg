@@ -32,6 +32,33 @@ class ServerPlayer extends Player {
 		this.session = session;
 	}
 
+	takeFatigue() {
+		let highestUnits = [];
+		let highestUnitStr = 0;
+
+		for (const unit of this.getUnits()) {
+			if (unit.strength > highestUnitStr) {
+				highestUnitStr = unit.strength;
+				highestUnits = [unit];
+			} else if (unit.strength === highestUnitStr) {
+				highestUnits.push(unit);
+			}
+		}
+
+		if (highestUnits.length > 0) {
+			const unit = highestUnits[Math.floor(Math.random() * highestUnits.length)];
+			unit.takeDamage(this.fatigue);
+			const msg = {
+				message: 'fatigue',
+				id: unit.id
+			};
+			this.game.p1.send(msg);
+			this.game.p2.send(msg);
+		}
+
+		this.fatigue++;
+	}
+
 	clientToServerX(x: number) {
 		return this.isPlayer2 ? (this.game.rules.boardWidth - x - 1) : x;
 	}
@@ -156,6 +183,8 @@ export class ServerGame extends Game {
 		playerToNotify.send({
 			message: 'nextStage'
 		});
+		if (this.stage === 'Play')
+			p.takeFatigue();
 		this.nextStage();
 		return true;
 	}
