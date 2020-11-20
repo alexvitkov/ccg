@@ -1,7 +1,7 @@
 import { handleLobbyMessage, refreshLobbies } from './lobby';
 import { game, ClientGame } from './game';
 import { onGameStarted } from './gameHtml';
-import { Message, GameStartedMessage, ListLobbiesResponse, BlindStageOverMessage } from '../messages';
+import  * as messages from '../messages';
 
 var ws: WebSocket;
 
@@ -11,7 +11,7 @@ var ws: WebSocket;
 	window.location.assign('/');
 }
 
-export function send(message: Message) {
+export function send(message: messages.Message) {
 	ws.send(JSON.stringify(message));
 }
 
@@ -19,33 +19,33 @@ wsConnect(() => {
 	refreshLobbies();
 });
 
-function handleMessage(msg: Message): boolean {
+function handleMessage(msg: messages.Message): boolean {
 	console.log(msg);
 	switch (msg.message) {
 		case 'gameStarted': {
-			new ClientGame(msg as GameStartedMessage);
+			new ClientGame(msg as messages.GameStartedMessage);
 			onGameStarted();
 			return true;
 		}
 		case 'blindStageOver': {
-			game.blindStageOver(msg as BlindStageOverMessage);
+			game.blindStageOver(msg as messages.BlindStageOverMessage);
 		}
 	}
 	return handleLobbyMessage(msg);
 }
 
-function wsConnect(callback) {
+function wsConnect(callback: () => void) {
 	// the ws server is the webserver we're connected to
 	const loc = window.location;
 	var wsPath = (loc.protocol === "https:" ? "wss:" : "ws:") + "//" + loc.host;
 
 	ws = new WebSocket(wsPath);
-	ws.addEventListener('open', ev => {
+	ws.addEventListener('open', _ev => {
 		callback();
 	});
 	ws.addEventListener('message', ev => {
 		const msg = JSON.parse(ev.data);
-		handleMessage(msg as Message);
+		handleMessage(msg as messages.Message);
 	});
 	ws.addEventListener('close', ev => {
 		console.log('WS Closed', ev.code, ev.reason);

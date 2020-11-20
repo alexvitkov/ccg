@@ -1,4 +1,4 @@
-import { Message, GameStartedMessage, DoneWithBlindStageMessage, BlindStageOverMessage } from '../messages';
+import * as messages from '../messages';
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
 import { set, blindStageOver, makeCardDiv } from './gameHtml';
 import { send } from './main';
@@ -21,7 +21,7 @@ export class ClientPlayer extends Player {
 }
 
 export class ClientGame extends Game {
-	constructor(message: GameStartedMessage) {
+	constructor(message: messages.GameStartedMessage) {
 		super(message.rules);
 		this.p1 = new ClientPlayer(this);
 		this.p2 = new ClientPlayer(this);
@@ -44,15 +44,14 @@ export class ClientGame extends Game {
 	doneWithBlindStage() {
 		send({
 			message: 'doneWithBlindStage',
-			played: Object.values(this.board).map(card => [card.id, card.x, card.y])
-		} as DoneWithBlindStageMessage);
+			played: Object.values(this._board).map(card => [card.id, card.x, card.y])
+		} as messages.DoneWithBlindStageMessage);
 	}
 
-	blindStageOver(msg: BlindStageOverMessage) {
+	blindStageOver(msg: messages.BlindStageOverMessage) {
 		for (const [id, cardID, x, y] of msg.otherPlayerPlayed) {
 		 	const card = this.instantiate(id, this.p2, this.rules.cardSet[cardID]);
-			const xy = this.xy(x, y);
-			this.board[xy] = card;
+			this.putCard(x, y, card);
 			makeCardDiv(card, x, y);
 		}
 		blindStageOver();

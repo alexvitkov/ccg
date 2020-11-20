@@ -98,12 +98,6 @@ export class ServerGame extends Game {
 		return false;
 	}
 
-	xyp2(x: number, y: number) {
-		y = this.rules.boardHeight - y - 1;
-		x = this.rules.boardWidth  - x - 1;
-		return this.xy(x, y);
-	}
-
 	onPlayerDoneWithBlindStage(p: ServerPlayer, msg: DoneWithBlindStageMessage): boolean {
 		// Validate the message
 		if (this.stage !== 'BlindStage' || !Array.isArray(msg.played))
@@ -129,9 +123,9 @@ export class ServerGame extends Game {
 			y = p.clientToServerY(y);
 			if (x < 0 || y < 0 || x >= this.rules.boardWidth || y >= this.rules.boardHeight)
 				return false;
-			const xy = this.xy(x, y);
 
-			if (this.board[xy] || takenxy.indexOf(xy) !== -1)
+			const xy = this._xy(x, y);
+			if (this.getBoard(x, y) || takenxy.indexOf(xy) !== -1)
 				return false;
 
 			takenxy.push(xy);
@@ -185,7 +179,7 @@ export class ServerGame extends Game {
 		this.stage = 'Play';
 	}
 
-	coordinatesValid(x, y): boolean {
+	coordinatesValid(x: number, y: number): boolean {
 		return Number.isInteger(x) && Number.isInteger(y)
 			&& x >= 0 && y >= 0
 			&& x < this.rules.boardWidth && y < this.rules.boardHeight;

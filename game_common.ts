@@ -53,7 +53,7 @@ export class Player {
 
 	canPlayAnyCard() : boolean {
 		if (this.game.stage === 'BlindStage')
-			return this.unitsCount < this.game.rules.blindStageUnits;
+			return this.getUnits().length < this.game.rules.blindStageUnits;
 		return false;
 	}
 
@@ -66,8 +66,7 @@ export class Player {
 			return false;
 		if (this.game.stage === 'BlindStage' && y >= this.game.rules.ownHeight)
 			return false;
-		const xy = this.game.xy(x, y);
-		if (this.game.board[xy])
+		if (this.game.getBoard(x, y))
 			return false;
 		return true;
 	}
@@ -77,13 +76,13 @@ export class Player {
 		if (!card.onBoard || this.game.stage === 'BlindStage') {
 			for (let y = 0; y < this.game.rules.ownHeight; y++)
 				for (let x = 0; x < this.game.rules.boardWidth; x++)
-					squares.push(this.game.xy(x, y));
+					squares.push(this.game._xy(x, y));
 		}
 		return squares;
 	}
 
 	getUnits() {
-		return Object.values(this.game.board).filter(c => c.owner === this);
+		return Object.values(this.game._board).filter(c => c.owner === this);
 	}
 
 	canReturnCard() : boolean {
@@ -99,14 +98,11 @@ export class Player {
 		const card = this.hand[posInHand];
 		if (!card || y >= this.game.rules.ownHeight)
 			return false;
-		const xy = this.game.xy(x, y);
-		if (this.game.board[xy])
+		if (this.game.getBoard(x, y))
 			return false;
 
 		this.hand.splice(posInHand, 1);
-		this.game.board[xy] = card;
-		card.x = x;
-		card.y = y;
+		this.game.putCard(x, y, card);
 		this.recalculateStrength();
 		return true;
 	}
@@ -114,18 +110,14 @@ export class Player {
 	// Assuming canPlayCard === true
 	playCard2(card: Card, x: number, y: number): boolean {
 		const posInHand = this.hand.indexOf(card);
-
 		if (posInHand === -1)
 			return false;
-		const xy = this.game.xy(x, y);
-		console.log(xy);
-		if (this.game.board[xy])
+
+		if (this.game.getBoard(x, y))
 			return false;
 
 		this.hand.splice(posInHand, 1);
-		this.game.board[xy] = card;
-		card.x = x;
-		card.y = y;
+		this.game.putCard(x, y, card);
 		this.recalculateStrength();
 		return true;
 	}
@@ -145,34 +137,19 @@ export class Player {
 	moveCard(card: Card, x: number, y: number): boolean {
 		if (!this.canMoveCard(card, x, y))
 			return false;
-
-		const xy = this.game.xy(x, y);
-
-		delete this.game.board[this.game.xy(card.x, card.y)];
-		this.game.board[xy] = card;
-		card.x = x;
-		card.y = y;
+		this.game.putCard(x, y, card);
 		return true;
 	}
+
 
 	// Assuming canReturnCard() === true
 	// previousCard = null to insert at start of hand
 	returnCard(card: Card, previousCard?: Card) {
-		const xy = this.game.xy(card.x, card.y);
-		delete this.game.board[xy];
-		card.x = -1;
-		card.y = -1;
 
 		const pcIndex = this.hand.indexOf(previousCard);
 		this.hand.splice(pcIndex + 1, 0, card);
 
 		this.recalculateStrength();
-	}
-
-	get unitsCount() {
-		return Object.values(this.game.board)
-		.filter(unit => unit.owner === this)
-		.length;
 	}
 }
 
@@ -186,16 +163,35 @@ export class Game {
 	p2: Player;
 
 	cards: {[id: number]: Card};
-	board: {[xy: number]: Card};
+	_board: {[xy: number]: Card};
+
+	getBoard(x: number, y: number) {
+		return this._board[y * this.rules.boardWidth + x];
+	}
+
+	_xy(x: number, y: number) {
+		return y * this.rules.boardWidth + x;
+	}
+
+	liftCard(card: Card) {
+		const xy = this._xy(card.x, card.y);
+		delete this._board[xy];
+		card.x = -1;
+		card.x = -1;
+	}
+
+	putCard(x: number, y: number, card: Card) {
+		this.liftCard(card);
+		this._board[y * this.rules.boardWidth + x] = card;
+		card.x = x;
+		card.y = y;
+	}
 
 	constructor(rules: GameRules) {
 		this.cards = {};
-		this.board = {};
+		this._board = {};
 		this.rules = rules;
 		this.stage = 'BlindStage';
 	}
 
-	xy(x: number, y: number) {
-		return y * this.rules.boardWidth + x;
-	}
 }

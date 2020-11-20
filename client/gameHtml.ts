@@ -5,7 +5,7 @@ const gameDiv = document.getElementById("game");
 const blindStageMessageDiv = document.getElementById('blindStageMessage');
 const readyButton: HTMLButtonElement = document.getElementById("readyButton") as any;
 readyButton.onclick = ready;
-gameDiv.onmouseup = e => { if (draggedDiv) { stopDrag(true); } };
+gameDiv.onmouseup = _e => { if (draggedDiv) { stopDrag(true); } };
 
 const myHandDiv = document.getElementById("myHand");
 const opponentHandDiv = document.getElementById("opponentHandDiv ");
@@ -44,7 +44,7 @@ export function makeCardDiv(card: Card, x?: number, y?: number): HTMLDivElement 
 	cardDiv.appendChild(strength);
 
 	if (typeof x === 'number' && typeof y === 'number') {
-		const xy = game.xy(x, y);
+		const xy = game._xy(x, y);
 		boardTd[xy].appendChild(cardDiv);
 	}
 
@@ -174,7 +174,7 @@ function onDropOnGrid(x: number, y: number) {
 	if (draggedDiv) {
 		if (isDraggedCardFromHand()) {
 			if (game.p1.playCard(draggedCardPosInHand, x, y)) {
-				boardTd[game.xy(x, y)].appendChild(draggedDiv);
+				boardTd[game._xy(x, y)].appendChild(draggedDiv);
 				stopDrag(false); update();
 			}
 			else {
@@ -186,7 +186,7 @@ function onDropOnGrid(x: number, y: number) {
 				stopDrag(true);
 			}
 			else {
-				boardTd[game.xy(x, y)].appendChild(draggedDiv);
+				boardTd[game._xy(x, y)].appendChild(draggedDiv);
 				stopDrag(false);
 				update();
 			}
@@ -194,7 +194,7 @@ function onDropOnGrid(x: number, y: number) {
 	}
 }
 
-myHandDiv.onmouseup = e => {
+myHandDiv.onmouseup = _e => {
 	if (draggedDiv) {
 		// if currentlyDraggingCard is from hand, just return it
 		if (isDraggedCardFromHand()) {
