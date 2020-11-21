@@ -38,19 +38,14 @@ export class Card {
 		return this.x >= 0;
 	}
 
-	async die() {
+	die() {
 		this.owner.game.liftCard(this);
 	}
 
-	async takeDamage(damage: number) {
+	takeDamage(damage: number) {
 		this.strength -= damage;
-		await this._takeDamageView(damage);
 		if (this.strength <= 0)
-			await this.die();
-	}
-
-	// overrided by client
-	protected async _takeDamageView(_damage: number) {
+			this.die();
 	}
 
 	constructor(id: number, owner: Player, proto: CardProto) {
@@ -61,11 +56,11 @@ export class Card {
 		this.x = -1;
 		this.y = -1;
 		if (proto.active)
-			this.active =  effects[proto.active](owner.game, this);
+			this.active = effects[proto.active](owner.game, this);
 		if (proto.sot)
-			this.sot =  effects[proto.sot](owner.game, this);
+			this.sot = effects[proto.sot](owner.game, this);
 		if (proto.eot)
-			this.eot =  effects[proto.eot](owner.game, this);
+			this.eot = effects[proto.eot](owner.game, this);
 	}
 }
 
@@ -100,12 +95,12 @@ export class Player {
 		this.isPlayer2 = isPlayer2;
 	}
 
-	async active(card: Card): Promise<boolean> {
+	active(card: Card): boolean {
 		if (card.active && card.owner === this && card.onBoard 
 			&& this.game.stage === 'Active' && this.game.turn === this)
 		{
-			await card.active.effect(); 
-			await this.game.nextStage();
+			card.active.effect(); 
+			this.game.nextStage();
 			return true;
 		}
 		return false;
@@ -231,7 +226,7 @@ export class Game {
 				// Trigger EOT effects for player who just finished his turn
 				this.turn.eot = this.turn.eot.filter(c => c.card.onBoard);
 				for (const e of this.turn.eot)
-					await e.effect();
+					e.effect();
 
 				// Switch player
 				this.turn = this.otherPlayer(this.turn);
@@ -245,7 +240,7 @@ export class Game {
 				// Trigger SOT effects for the player who just started his turn
 				this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
 				for (const e of this.turn.sot) {
-					await e.effect();
+					e.effect();
 				}
 			break;
 		}
@@ -254,6 +249,10 @@ export class Game {
 	getBoard(x: number, y: number) {
 		return this._board[y * this.rules.boardWidth + x];
 	}
+
+	beginGroup() {}
+	endGroup() {}
+	push(_x) {}
 
 	_xy(x: number, y: number) {
 		return y * this.rules.boardWidth + x;
@@ -283,9 +282,6 @@ export class Game {
 		return true;
 	}
 
-	async highlight(_unit: Card, _duration: number) {
-	}
-
 	coordinatesValid(x: number, y: number): boolean {
 		return Number.isInteger(x) && Number.isInteger(y)
 		&& x >= 0 && y >= 0
@@ -295,6 +291,5 @@ export class Game {
 	otherPlayer(p: Player) {
 		return (p === this.p1) ? this.p2 : this.p1;
 	}
-
 
 }

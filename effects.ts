@@ -4,7 +4,7 @@ export type EffectBuilder = (game: Game, card: Card) => Effect;
 
 export type Effect = {
 	card: Card;
-	effect: () => Promise<any>;
+	effect: () => any;
 }
 
 function bomberEffect(dmg: number): EffectBuilder {
@@ -14,18 +14,17 @@ function bomberEffect(dmg: number): EffectBuilder {
 			effect: async () => {
 				// we store these because the card may get destroyed 
 				// and we lose its coords mid loop
-				await game.highlight(card, 300);
 				const myX = card.x;
 				const myY = card.y;
-				const promises = [game.highlight(card, 500)];
+				game.beginGroup();
 				for (var x = myX - 1; x <= myX + 1; x++) {
 					for (var y = myY - 1; y <= myY + 1; y++) {
 						const card = game.getBoard(x, y);
 						if(card)
-							promises.push(card.takeDamage(dmg));
+							card.takeDamage(dmg);
 					}
 				}
-				await Promise.all(promises);
+				game.endGroup();
 			}
 		};
 	}
@@ -50,12 +49,10 @@ function healerEffect(amount: number): EffectBuilder {
 					else if (dist === nearestCardDist)
 						nearestCards.push(c);
 				}
-
-				const promises = [game.highlight(card, 500)];
+				game.beginGroup();
 				for (const c of nearestCards)
-					promises.push(c.takeDamage(-amount));
-
-				await Promise.all(promises);
+					c.takeDamage(-amount);
+				game.endGroup();
 			}
 		}
 	}
@@ -66,14 +63,12 @@ function bulletEffect(dmg: number): EffectBuilder {
 		return {
 			card: card,
 			effect: async () => {
-				var div;
-				const promises = [game.highlight(card, 800)];
 				const p2: boolean = card.owner.isPlayer2;
 				if (p2) {
 					for (let y = card.y - 1; y >= 0; y--) {
 						const unit = game.getBoard(card.x, y);
 						if (unit) {
-							promises.push(unit.takeDamage(dmg));
+							unit.takeDamage(dmg);
 							break;
 						}
 					}
@@ -82,12 +77,11 @@ function bulletEffect(dmg: number): EffectBuilder {
 					for (let y = card.y + 1; y < game.rules.boardHeight; y++) {
 						const unit = game.getBoard(card.x, y);
 						if (unit) {
-							promises.push(unit.takeDamage(dmg));
+							unit.takeDamage(dmg);
 							break;
 						}
 					}
 				}
-				await Promise.all(promises);
 			}
 		}
 	}

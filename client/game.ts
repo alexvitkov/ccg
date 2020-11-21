@@ -8,6 +8,15 @@ import { Effect } from '../effects';
 export var game: ClientGame;
 export var rules: GameRules;
 
+function highlight(game: Game, card, effect: Effect) {
+	const oldEffect = effect.effect;
+	effect.effect = () => {
+		game.push(() => ve.beginHightlight(card));
+		oldEffect();
+		game.push(() => ve.endHightlight(card));
+	}
+}
+
 export class ClientCard extends Card {
 	div: HTMLDivElement;
 	owner: ClientPlayer;
@@ -15,16 +24,25 @@ export class ClientCard extends Card {
 	constructor(id: number, owner: Player, proto: CardProto) {
 		super(id, owner, proto);
 		this.div = makeCardDiv(this);
+		if (this.sot)
+			highlight(game, this, this.sot);
+		if (this.eot)
+			highlight(game, this, this.eot);
+		if (this.active)
+			highlight(game, this, this.active);
 	}
 
-	protected async _takeDamageView(damage: number) {
-		await ve.TakeDamage(this, damage);
+	takeDamage(dmg: number) {
+		this.owner.game.push(ve.TakeDamage(this, this.strength, dmg));
+		super.takeDamage(dmg);
 	}
 
-	async die() {
+	die() {
+		this.owner.game.push(() => { 
+			this.owner.recalculateStrength();
+			this.div.remove(); 
+		});
 		super.die();
-		this.owner.recalculateStrength();
-		this.div.remove();
 	}
 }
 
@@ -117,6 +135,10 @@ export class ClientGame extends Game {
 	p1: ClientPlayer;
 	p2: ClientPlayer;
 
+	currentEfect: Promise<any> = Promise.resolve();
+	group: number = 0;
+	groupItems: (() => any)[] = [];
+
 	constructor(message: messages.GameStartedMessage) {
 		super(message.rules);
 		this.p1 = new ClientPlayer(this, false);
@@ -131,12 +153,30 @@ export class ClientGame extends Game {
 			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
 	}
 
-	async highlight(unit: ClientCard, duration: number) {
-		await ve.Highlight(unit, duration);
+	push(effect: () => any) {
+		if (this.group === 0)
+			this.currentEfect = this.currentEfect.then(effect);
+		else
+			this.groupItems.push(effect);
 	}
 
-	async nextStage() {
-		await super.nextStage();
+	beginGroup() {
+		this.group ++;
+	}
+
+	endGroup() {
+		this.group --;
+		if (this.group === 0) {
+			const items = this.groupItems;
+			this.push( async () => {
+				await Promise.all(items.map(y => y()));
+			});
+			this.groupItems = [];
+		}
+	}
+
+	nextStage() {
+		super.nextStage();
 		onStageChanged();
 	}
 
@@ -180,6 +220,49 @@ export class ClientGame extends Game {
 	canMoveCards() {
 		return this.stage === 'BlindStage'
 			|| (this.stage == 'Move' && this.turn === this.p1)
+	}
+
+	handleMessage(msg: messages.Message): boolean {
+		switch (msg.message) {
+			case 'blindStageOver': {
+				this.blindStageOver(msg as messages.BlindStageOverMessage);
+				break;
+			}
+			case 'opponentPlayedCard': {
+				const { id, cardID, x, y } = msg;
+				this.instantiate(id, this.p2, this.rules.cardSet[cardID]);
+				this.putCard(x, y, this.cards[id]);
+				this.nextStage();
+				break;
+			}
+			case 'opponentMovedCard': {
+				const { id, x, y } = msg;
+				this.putCard(x, y, this.cards[id]);
+				this.p2.movePoints -= 1;
+				if (this.p2.movePoints == 0)
+					this.nextStage();
+				set('enemyMovePoints', this.p2.movePoints.toString());
+				break;
+			}
+			case 'nextStage': {
+				this.nextStage();
+				break;
+			}
+			case 'active': {
+				this.p2.active(this.cards[msg.id]);
+				break;
+			}
+			case 'fatigue': {
+				const unit = this.cards[msg.id];
+				unit.takeDamage(unit.owner.fatigue);
+				unit.owner.fatigue++;
+				break;
+			}
+			default: {
+				return false;
+			}
+		}
+		return true;
 	}
 }
 
