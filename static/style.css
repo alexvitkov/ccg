@@ -421,14 +421,21 @@ fieldset {
 
 .damageText, .healText {
 	position: absolute;
+	z-index: 15;
+	background: rgba(255, 0, 0, 0.5);
 	top: 0;
-	left: 0
+	left: 0;
 	right: 0;
 	bottom: 0;
 	color: red;
+	margin: 0;
+	padding: 0;
 	font-size: 5vh;
+	text-align: center;
+	-webkit-text-stroke: 1px black;
 }
 
 .healText {
+	background: rgba(0, 255, 0, 0.5);
 	color: green;
 }

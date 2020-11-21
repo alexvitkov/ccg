@@ -18,7 +18,7 @@ export async function TakeDamage(card: ClientCard, dmg: number) {
 	}
 	card.div.appendChild(div);
 	(card.div.getElementsByClassName('strength')[0] as HTMLElement).innerText = card.strength.toString();
-	await sleep(500);
+	await sleep(1000);
 
 	card.owner.recalculateStrength();
 
