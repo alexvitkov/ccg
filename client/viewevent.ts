@@ -4,6 +4,12 @@ function sleep(ms: number) {
 	return new Promise(r => setTimeout(r, ms));
 }
 
+export async function Highlight(card: ClientCard, duration) {
+	card.div.style.transform = 'translate(-50%, -50%) scale(1.2)';
+	await sleep(duration);
+	card.div.style.transform = 'translate(-50%, -50%)';
+}
+
 export async function TakeDamage(card: ClientCard, dmg: number) {
 
 	const div = document.createElement('div');

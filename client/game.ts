@@ -128,6 +128,10 @@ export class ClientGame extends Game {
 			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
 	}
 
+	async highlight(unit: ClientCard, duration: number) {
+		await ve.Highlight(unit, duration);
+	}
+
 	async nextStage() {
 		await super.nextStage();
 		onStageChanged();

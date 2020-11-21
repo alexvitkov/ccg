@@ -14,9 +14,10 @@ function bomberEffect(dmg: number): EffectBuilder {
 			effect: async () => {
 				// we store these because the card may get destroyed 
 				// and we lose its coords mid loop
+				await game.highlight(card, 300);
 				const myX = card.x;
 				const myY = card.y;
-				const promises = [];
+				const promises = [game.highlight(card, 500)];
 				for (var x = myX - 1; x <= myX + 1; x++) {
 					for (var y = myY - 1; y <= myY + 1; y++) {
 						const card = game.getBoard(x, y);
@@ -50,7 +51,7 @@ function healerEffect(amount: number): EffectBuilder {
 						nearestCards.push(c);
 				}
 
-				const promises = [];
+				const promises = [game.highlight(card, 500)];
 				for (const c of nearestCards)
 					promises.push(c.takeDamage(-amount));
 
@@ -64,13 +65,16 @@ function bulletEffect(dmg: number): EffectBuilder {
 	return (game, card) => {
 		return {
 			card: card,
-			effect: () => {
+			effect: async () => {
+				var div;
+				const promises = [game.highlight(card, 800)];
 				const p2: boolean = card.owner.isPlayer2;
 				if (p2) {
 					for (let y = card.y - 1; y >= 0; y--) {
 						const unit = game.getBoard(card.x, y);
 						if (unit) {
-							return unit.takeDamage(dmg);
+							promises.push(unit.takeDamage(dmg));
+							break;
 						}
 					}
 				}
@@ -78,10 +82,12 @@ function bulletEffect(dmg: number): EffectBuilder {
 					for (let y = card.y + 1; y < game.rules.boardHeight; y++) {
 						const unit = game.getBoard(card.x, y);
 						if (unit) {
-							return unit.takeDamage(dmg);
+							promises.push(unit.takeDamage(dmg));
+							break;
 						}
 					}
 				}
+				await Promise.all(promises);
 			}
 		}
 	}

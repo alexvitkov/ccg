@@ -246,7 +246,6 @@ export class Game {
 				this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
 				for (const e of this.turn.sot) {
 					await e.effect();
-					console.log('effect ', e)
 				}
 			break;
 		}
@@ -282,6 +281,9 @@ export class Game {
 		card.x = x;
 		card.y = y;
 		return true;
+	}
+
+	async highlight(_unit: Card, _duration: number) {
 	}
 
 	coordinatesValid(x: number, y: number): boolean {

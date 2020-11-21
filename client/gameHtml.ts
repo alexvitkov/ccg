@@ -40,6 +40,9 @@ export function makeCardDiv(card: ClientCard): HTMLDivElement {
 
 	cardDiv.setAttribute('data-id', card.id.toString());
 
+	cardDiv.onmouseenter= () => { hoverCard(card); };
+	cardDiv.onmouseleave= () => { stopHover() };
+
 	cardDiv.onmousedown = e => onCardDrag(card, cardDiv, e);
 	cardDiv.onclick = () => {
 		if (game.p1.active(card)) {
@@ -54,6 +57,14 @@ export function makeCardDiv(card: ClientCard): HTMLDivElement {
 	cardDiv.appendChild(strength);
 
 	return cardDiv;
+}
+
+function hoverCard(card: ClientCard) {
+	document.getElementById('sidebar1').innerText = card.proto.cardDescription;
+}
+
+function stopHover() {
+	document.getElementById('sidebar1').innerText = '';
 }
 
 export function onGameStarted() {
