@@ -37,13 +37,13 @@ async function handleMessage(msg: messages.Message): Promise<boolean> {
 		case 'opponentPlayedCard': {
 			const { id, cardID, x, y } = msg;
 			game.instantiate(id, game.p2, game.rules.cardSet[cardID]);
-			await game.putCard(x, y, game.cards[id]);
+			game.putCard(x, y, game.cards[id]);
 			await game.nextStage();
 			break;
 		}
 		case 'opponentMovedCard': {
 			const { id, x, y } = msg;
-			await game.putCard(x, y, game.cards[id]);
+			game.putCard(x, y, game.cards[id]);
 			game.p2.movePoints -= 1;
 			if (game.p2.movePoints == 0)
 				await game.nextStage();

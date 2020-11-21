@@ -60,7 +60,7 @@ export function makeCardDiv(card: ClientCard): HTMLDivElement {
 }
 
 function hoverCard(card: ClientCard) {
-	document.getElementById('sidebar1').innerText = card.proto.cardDescription;
+	document.getElementById('sidebar1').innerHTML = card.proto.cardDescription;
 }
 
 function stopHover() {

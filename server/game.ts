@@ -10,9 +10,9 @@ export const ruleset: GameRules = {
 	startingHandSize: 10,
 	blindStageUnits: 3,
 	cardSet: [
-		new CardProto(0, 'Bomber', 'Active:\n Deal 5 damage to all units in a 3x3 square around the bomber', 4, 'BOMB', 'bomberActive'),
-		new CardProto(1, 'Healer', 'Start of Turn:\n Heal all the nearest units for 1', 4, 'HEAL', null, 'healerPassive'),
-		new CardProto(2, 'Gunner', 'End of Turn:\n Fire forward a bullet dealing 1 damage.\n\nActive:\nFire forward a bullet dealing 2 damage.', 6, 'GUN', 'gunnerActive', null, 'gunnerPassive'),
+		new CardProto(0, 'Bomber', '<h1>Active</h1>\n Deal 5 damage in a 3x3 square around self', 4, 'BOMB', 'bomberActive'),
+		new CardProto(1, 'Healer', '<h1>Start of Turn</h1>\n Heal all the nearest units for 1', 4, 'HEAL', null, 'healerPassive'),
+		new CardProto(2, 'Gunner', '<h1>End of Turn</h1>\n Fire forward a bullet dealing 1 damage\n<h1>Active</h1>Fire forward a bullet dealing 2 damage.', 6, 'GUN', 'gunnerActive', null, 'gunnerPassive'),
 	],
 	minDeckSize: 20,
 	maxDeckSize: 30,
@@ -81,7 +81,7 @@ export class ServerGame extends Game {
 		this.p1 = new ServerPlayer(this, session1, false)
 		this.p2 = new ServerPlayer(this, session2, true)
 
-		const hand = [0,0,0,1,1,1,2,2,2];
+		const hand = [0,0,0,0,1,1,1,2,2,2,2];
 		this.p1.hand = hand.map(id => this.instantiate(this.p1, this.rules.cardSet[id]));
 		this.p2.hand = hand.map(id => this.instantiate(this.p2, this.rules.cardSet[id]));
 

@@ -133,6 +133,8 @@ export class ClientGame extends Game {
 	}
 
 	async nextStage() {
+		// TODO this is a hack to fix a desync
+		(document.getElementById("readyButton") as any).disabled = true;
 		await super.nextStage();
 		onStageChanged();
 	}
