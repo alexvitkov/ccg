@@ -238,6 +238,8 @@ function ready() {
 	if (game.stage === 'BlindStage') {
 		readyButton.disabled = true;
 		game.doneWithBlindStage();
+		gameDiv.classList.remove('canMove');
+		gameDiv.classList.remove('canPlay');
 	}
 	else {
 		send({

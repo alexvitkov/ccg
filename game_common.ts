@@ -84,6 +84,7 @@ export class Player {
 	isPlayer2: boolean;
 	movePoints: number;
 	fatigue: number;
+	doneWithBlindStage: boolean;
 
 	sot: Effect[] = [];
 	eot: Effect[] = [];
@@ -92,6 +93,7 @@ export class Player {
 		this.game = game;
 		this.fatigue = 1;
 		this.movePoints = 0;
+		this.doneWithBlindStage = false;
 		this.isPlayer2 = isPlayer2;
 	}
 

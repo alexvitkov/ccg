@@ -24,11 +24,9 @@ export const ruleset: GameRules = {
 class ServerPlayer extends Player {
 	session: Session;
 	game: ServerGame;
-	doneWithBlindStage: boolean;
 
 	constructor(game: ServerGame, session: Session, isPlayer2: boolean) {
 		super(game, isPlayer2);
-		this.doneWithBlindStage = false;
 		this.session = session;
 	}
 

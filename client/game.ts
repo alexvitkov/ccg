@@ -187,6 +187,7 @@ export class ClientGame extends Game {
 	}
 
 	doneWithBlindStage() {
+		this.p1.doneWithBlindStage = true;
 		send({
 			message: 'doneWithBlindStage',
 			played: Object.values(this._board).map(card => [card.id, card.x, card.y])
@@ -213,12 +214,12 @@ export class ClientGame extends Game {
 
 	canPlayCards() {
 		if (this.stage === 'BlindStage')
-			return this.p1.getUnits().length < this.rules.blindStageUnits;
+			return !this.p1.doneWithBlindStage && this.p1.getUnits().length < this.rules.blindStageUnits;
 		else return this.stage === 'Play' && this.turn === this.p1;
 	}
 
 	canMoveCards() {
-		return this.stage === 'BlindStage'
+		return (this.stage === 'BlindStage' && !this.doneWithBlindStage)
 			|| (this.stage == 'Move' && this.turn === this.p1)
 	}
 
