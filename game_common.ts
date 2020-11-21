@@ -30,22 +30,27 @@ export class Card {
 	strength: number;
 	x: number;
 	y: number;
-	active: () => void;
-	sot: () => void;
-	eot: () => void;
+	active: Effect;
+	sot: Effect;
+	eot: Effect;
 
 	get onBoard() {
 		return this.x >= 0;
 	}
 
-	die() {
+	async die() {
 		this.owner.game.liftCard(this);
 	}
 
-	takeDamage(damage: number) {
+	async takeDamage(damage: number) {
 		this.strength -= damage;
+		await this._takeDamageView(damage);
 		if (this.strength <= 0)
-			this.die();
+			await this.die();
+	}
+
+	// overrided by client
+	protected async _takeDamageView(_damage: number) {
 	}
 
 	constructor(id: number, owner: Player, proto: CardProto) {
@@ -56,11 +61,11 @@ export class Card {
 		this.x = -1;
 		this.y = -1;
 		if (proto.active)
-			this.active = () => { effects[proto.active](this.owner.game, this); }
+			this.active =  effects[proto.active](owner.game, this);
 		if (proto.sot)
-			this.sot = () => { effects[proto.sot](this.owner.game, this); }
+			this.sot =  effects[proto.sot](owner.game, this);
 		if (proto.eot)
-			this.eot = () => { effects[proto.eot](this.owner.game, this); }
+			this.eot =  effects[proto.eot](owner.game, this);
 	}
 }
 
@@ -85,8 +90,8 @@ export class Player {
 	movePoints: number;
 	fatigue: number;
 
-	sot: { card: Card, effect: () => void }[] = [];
-	eot: { card: Card, effect: () => void }[] = [];
+	sot: Effect[] = [];
+	eot: Effect[] = [];
 
 	constructor(game: Game, isPlayer2: boolean) {
 		this.game = game;
@@ -95,12 +100,12 @@ export class Player {
 		this.isPlayer2 = isPlayer2;
 	}
 
-	active(card: Card): boolean {
+	async active(card: Card): Promise<boolean> {
 		if (card.active && card.owner === this && card.onBoard 
 			&& this.game.stage === 'Active' && this.game.turn === this)
 		{
-			card.active();
-			this.game.nextStage();
+			await card.active.effect(); 
+			await this.game.nextStage();
 			return true;
 		}
 		return false;
@@ -212,7 +217,7 @@ export class Game {
 		this.stage = 'BlindStage';
 	}
 
-	nextStage() {
+	async nextStage() {
 		switch (this.stage) {
 			case 'Play': {
 				this.stage = 'Active';
@@ -225,23 +230,25 @@ export class Game {
 			case 'Move': 
 				// Trigger EOT effects for player who just finished his turn
 				this.turn.eot = this.turn.eot.filter(c => c.card.onBoard);
-				for (const e of this.turn.eot) {
-					e.effect();
-				}
+				for (const e of this.turn.eot)
+					await e.effect();
+
 				// Switch player
 				this.turn = this.otherPlayer(this.turn);
 				// FALLTHROUGH
 			case 'BlindStage':
-				// Trigger SOT effects for the player who just started his turn
 				this.stage = 'Play';
 				this.turn.movePoints += this.rules.movePointsPerTurn;
 				if (this.turn.movePoints > this.rules.maxMovePoints)
 					this.turn.movePoints = this.rules.maxMovePoints;
 
+				// Trigger SOT effects for the player who just started his turn
 				this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
-				for (const e of this.turn.sot)
-					e.effect();
-				break;
+				for (const e of this.turn.sot) {
+					await e.effect();
+					console.log('effect ', e)
+				}
+			break;
 		}
 	}
 
@@ -265,9 +272,9 @@ export class Game {
 			return false;
 		if (!card.onBoard) {
 			if (card.sot)
-				card.owner.sot.push({card: card, effect: card.sot});
+				card.owner.sot.push(card.sot);
 			if (card.eot)
-				card.owner.eot.push({card: card, effect: card.eot});
+				card.owner.eot.push(card.eot);
 		}
 		const xy = this._xy(card.x, card.y);
 		delete this._board[xy];

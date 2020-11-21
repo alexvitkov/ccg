@@ -404,7 +404,7 @@ fieldset {
 }
 
 .myStrength, .enemyStrength {
-	font-size: 15vh;
+	font-size: 10vh;
 	font-weight: bold;
 }
 
@@ -417,4 +417,18 @@ fieldset {
 
 #readyButton {
 	flex: 1 0 0;
+}
+
+.damageText, .healText {
+	position: absolute;
+	top: 0;
+	left: 0
+	right: 0;
+	bottom: 0;
+	color: red;
+	font-size: 5vh;
+}
+
+.healText {
+	color: green;
 }

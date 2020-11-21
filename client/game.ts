@@ -2,6 +2,8 @@ import * as messages from '../messages';
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
 import { set, blindStageOver, stageChanged as onStageChanged, makeCardDiv, fieldDivs } from './gameHtml';
 import { send } from './main';
+import * as ve from './viewevent';
+import { Effect } from '../effects';
 
 export var game: ClientGame;
 export var rules: GameRules;
@@ -15,16 +17,14 @@ export class ClientCard extends Card {
 		this.div = makeCardDiv(this);
 	}
 
-	die() {
-		super.die();
-		this.div.remove();
-		this.owner.recalculateStrength();
+	protected async _takeDamageView(damage: number) {
+		await ve.TakeDamage(this, damage);
 	}
 
-	takeDamage(damage: number) {
-		super.takeDamage(damage);
-		(this.div.getElementsByClassName('strength')[0] as HTMLElement).innerText = this.strength.toString();
+	async die() {
+		super.die();
 		this.owner.recalculateStrength();
+		this.div.remove();
 	}
 }
 
@@ -128,8 +128,8 @@ export class ClientGame extends Game {
 			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
 	}
 
-	nextStage() {
-		super.nextStage();
+	async nextStage() {
+		await super.nextStage();
 		onStageChanged();
 	}
 
