@@ -77,20 +77,23 @@ export class ClientPlayer extends Player {
 	C_allowedMoveSquaresXY(card: Card): number[] {
 		const squares = [];
 		// We're playing a card, valid squares are our side of the board
-		if (!card.onBoard) {
+		if (!card.onBoard || game.stage === 'BlindStage') {
 			for (let y = 0; y < this.game.rules.ownHeight; y++)
-			for (let x = 0; x < this.game.rules.boardWidth; x++)
-			squares.push(this.game._xy(x, y));
+			for (let x = 0; x < this.game.rules.boardWidth; x++) {
+				if (!game.getBoard(x, y) || (game.stage === 'BlindStage' && x === card.x && y === card.y))
+					squares.push(this.game._xy(x, y));
+			}
 		}
 		// We're moving a card, valid squares are the neighboring ones
 		else {
-			if (card.x > 0)
+			squares.push(this.game._xy(card.x, card.y));
+			if (card.x > 0 && !this.game.getBoard(card.x - 1, card.y))
 				squares.push(this.game._xy(card.x - 1, card.y));
-			if (card.x < this.game.rules.boardWidth - 1)
+			if (card.x < this.game.rules.boardWidth + 1 && !this.game.getBoard(card.x + 1, card.y))
 				squares.push(this.game._xy(card.x + 1, card.y));
-			if (card.y > 0)
+			if (card.y > 0 && !this.game.getBoard(card.x, card.y - 1))
 				squares.push(this.game._xy(card.x, card.y - 1));
-			if (card.y < this.game.rules.boardHeight - 1)
+			if (card.y < this.game.rules.boardHeight - 1 && !this.game.getBoard(card.x, card.y + 1))
 				squares.push(this.game._xy(card.x, card.y + 1));
 		}
 		return squares;
@@ -133,8 +136,6 @@ export class ClientGame extends Game {
 	}
 
 	async nextStage() {
-		// TODO this is a hack to fix a desync
-		(document.getElementById("readyButton") as any).disabled = true;
 		await super.nextStage();
 		onStageChanged();
 	}

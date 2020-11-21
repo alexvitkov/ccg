@@ -9,10 +9,11 @@ body, html {
 	height: 100%;
 	max-height: 100%;
 	font-size: 14pt;
-	--my-card: #47a9ff;
-	--my-card-bg: #90d3e8;
+	--my-card:  #466185;
+	--my-card1: #2471D6;
+	--my-card2: #5ca2ff;
+	--card-bg: #d1d1d1;
 	--opponent-card: #ff4769;
-	--opponent-card-bg: #ed80ae;
 	overflow: hidden;
 }
 
@@ -60,7 +61,7 @@ body {
 }
 
 
-#header>.logo {
+#header > .logo {
 	flex: 1 0 0;
 	font-size: 1.5rem;
 }
@@ -234,7 +235,7 @@ fieldset {
 #myHand, #opponentHand {
 	grid-column: 1 / span 9;
 	display: flex;
-	gap: 0.3rem;
+	gap: 1.5vh;
 	align-items: center;
 	justify-content: center;
 }
@@ -245,6 +246,7 @@ fieldset {
 	padding: 0;
 	border: 1px solid black;
 	position: relative;
+	background: #573657;
 }
 
 .field > .card, .field > .placeholder {
@@ -254,49 +256,27 @@ fieldset {
 	transform: translate(-50%, -50%);
 }
 
-.myfield {
-	background: #539299;
-}
-
-.opponentfield {
-	background: #9f356a;
-}
-
-.myfield:hover {
-	background: #3ebcca;
-}
-
-.opponentfield:hover {
-	background: #d72980;
-}
 
 .card {
 	font-size: 2.5vh;
 	position: relative;
 	z-index: 5;
+	background: var(--card-bg);
 }
 
-.mycard, .placeholder {
-	border: 1vh solid  var(--my-card);
+.card, .placeholder {
+	outline: 0.8vh solid  var(--my-card);
+	outline-offset: -0.3vh;
 }
 
 .opponentcard {
-	border: 1vh solid  var(--opponent-card);
+	--my-card: var(--opponent-card);
 }
 
 .card, .placeholder, .card > .text {
-	width: 8vh;
-	height: 10vh;
+	width: 9vh;
+	height: 11vh;
 	line-height: 8.5vh;
-}
-
-
-.mycard {
-	background: var(--my-card-bg);
-}
-
-.opponentcard {
-	background: var(--opponent-card-bg);
 }
 
 .card > .text {
@@ -309,8 +289,8 @@ fieldset {
 }
 
 .card > .strength {
-	bottom: -.8vh;
-	left: -.8vh;
+	bottom: 0;
+	left: 0;
 	margin: 0;
 	position: absolute;
 	width: 4vh;
@@ -321,13 +301,11 @@ fieldset {
 	font-weight: bold;
 	background: var(--my-card);
 }
-.opponentcard > .strength {
-	background: var(--opponent-card);
-}
 
 .card.dragged {
 	position: absolute;
 	pointer-events: none;
+	--my-card: var(--my-card2);
 }
 
 #game.dragging {
@@ -335,16 +313,36 @@ fieldset {
 }
 
 #game.canPlay > #myHand > .card,
-#game.canMove > .field  > .mycard 
+#game.canMove > .field  > .mycard,
+#game.canActive > .field > .mycard.hasActive
 {
 	cursor: grab;
+	--my-card: var(--my-card1);
 }
 
-.canDrop,
-#myHand.canReturn
+#game.canActive > .field > .mycard.hasActive {
+	cursor: pointer;
+}
+
+#game.canPlay > #myHand > .card:hover,
+#game.canMove > .field  > .mycard:hover,
+#game.canActive > .field > .mycard.hasActive:hover
 {
+	--my-card: var(--my-card2);
+}
+
+.field.actionable,
+#myHand.actionable
+{
+	background: #754b75;
 	cursor: grabbing;
 }
+
+.field.actionable:hover,
+#myHand.actionable:hover {
+	background: #a859a8;
+}
+
 
 #blindStageMessage {
 	z-index: 10;

@@ -30,6 +30,9 @@ export function makeCardDiv(card: ClientCard): HTMLDivElement {
 	const cardDiv = document.createElement('div');
 	cardDiv.classList.add('card', card.owner == game.p1 ? 'mycard' : 'opponentcard' );
 
+	if (card.active)
+		cardDiv.classList.add('card', 'hasActive');
+
 	const text = document.createElement('p');
 	text.classList.add('text');
 	const strength = document.createElement('p');
@@ -128,12 +131,13 @@ function onCardDrag(card: ClientCard, cardDiv: HTMLDivElement, event: MouseEvent
 
 	const allowedSquares = game.p1.C_allowedMoveSquaresXY(card);
 	for (const sq of allowedSquares)
-		fieldDivs[sq].classList.add('canDrop');
+		fieldDivs[sq].classList.add('actionable');
 	gameDiv.classList.add('dragging');
 	cardDiv.classList.add('dragged');
+	cardDiv.style.transform = '';
 
-	if (!isDraggedCardFromHand && game.stage === 'BlindStage')
-		myHandDiv.classList.add('canReturn');
+	if (isDraggedCardFromHand || game.stage === 'BlindStage')
+		myHandDiv.classList.add('actionable');
 
 	draggedCardPlaceholder = document.createElement('div');
 	draggedCardPlaceholder.classList.add('placeholder');
@@ -160,10 +164,10 @@ function stopDrag(returnToPlaceholder: boolean) {
 		draggedCardPlaceholder.remove();
 	}
 	for (const td of fieldDivs)
-		td.classList.remove('canDrop');
+		td.classList.remove('actionable');
 
 	gameDiv.classList.remove('dragging');
-	myHandDiv.classList.remove('canReturn');
+	myHandDiv.classList.remove('actionable');
 	draggedCard.div.classList.remove('dragged');
 	draggedCard.div.style.top = '';
 	draggedCard.div.style.left = '';
@@ -258,18 +262,25 @@ export function stageChanged() {
 	set('stage', game.stage);
 	gameDiv.classList.remove('canMove');
 	gameDiv.classList.remove('canPlay');
+	gameDiv.classList.remove('canActive');
 
 	readyButton.innerText = game.turn === game.p1 ? 'Skip ' + game.stage : "Opponent's turn";
 	readyButton.disabled  = game.turn !== game.p1;
 
 	if (game.turn === game.p1) {
 		switch (game.stage) {
-			case 'Move':
+			case 'Move': {
 				gameDiv.classList.add('canMove');
-			break;
-			case 'Play':
+				break;
+			}
+			case 'Play': {
 				gameDiv.classList.add('canPlay');
-			break;
+				break;
+			}
+			case 'Active': {
+				gameDiv.classList.add('canActive');
+				break;
+			}
 		}
 	}
 

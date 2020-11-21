@@ -217,7 +217,7 @@ export class Game {
 		this.stage = 'BlindStage';
 	}
 
-	async nextStage() {
+	nextStage() {
 		switch (this.stage) {
 			case 'Play': {
 				this.stage = 'Active';
