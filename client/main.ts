@@ -1,7 +1,7 @@
 import { handleLobbyMessage, refreshLobbies } from './lobby';
 
 import { game, ClientGame } from './game';
-import { set, onGameStarted } from './gameHtml';
+import { set, onGameStarted, desync } from './gameHtml';
 import  * as messages from '../messages';
 
 var ws: WebSocket;
@@ -46,6 +46,7 @@ function wsConnect(callback: () => void) {
 		handleMessage(msg);
 	});
 	ws.addEventListener('close', ev => {
+		desync(`Server closed the connection: ${ev.code}, ${ev.reason}`);
 		console.log('WS Closed', ev.code, ev.reason);
 	});
 }

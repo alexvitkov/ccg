@@ -5,15 +5,15 @@ function sleep(ms: number) {
 }
 
 export async function beginHightlight(card: ClientCard) {
-	card.div.style.transition = 'transform 0.3s';
-	card.div.style.transform = 'translate(-50%, -50%) scale(1.2)';
+	card.div.style.transform = 'scale(1.2)';
+	card.div.style.zIndex = '7';
 	await sleep(100);
 }
 
 export async function endHightlight(card: ClientCard) {
-	card.div.style.transform = 'translate(-50%, -50%)';
+	card.div.style.transform = '';
+	card.div.style.zIndex = '5';
 	await sleep(250);
-	card.div.style.transition = '';
 }
 
 export function TakeDamage(card: ClientCard, oldStr: number, dmg: number) {
@@ -29,12 +29,9 @@ export function TakeDamage(card: ClientCard, oldStr: number, dmg: number) {
 		}
 		card.div.appendChild(div);
 		(card.div.getElementsByClassName('strength')[0] as HTMLElement).innerText 
-		= (oldStr - dmg).toString();
+			= (oldStr - dmg).toString();
 
 		await sleep(800);
-
-		card.owner.recalculateStrength();
-
 		div.remove();
 	}
 }

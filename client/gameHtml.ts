@@ -6,6 +6,9 @@ gameDiv.onmouseup = _e => {
 	if (!messageDiv.hidden && performance.now() - messageStart > 300)
 	    messageDiv.hidden = true;
 	if (draggedCard) { stopDrag(true); } 
+	if (activeCard) {
+		stopActive();
+	}
 };
 
 const blindStageMessageDiv = document.getElementById('blindStageMessage');
@@ -13,11 +16,11 @@ const messageDiv = document.getElementById('message');
 var messageStart: number;
 
 const readyButton: HTMLButtonElement = document.getElementById("readyButton") as any;
-const stageInfoAboveButton = document.getElementsByClassName('stage2')[0];
+const readyButtonText: HTMLElement = document.getElementById("readyButtonText") as any;
 readyButton.onclick = ready;
 
 const myHandDiv = document.getElementById("myHand");
-const opponentHandDiv = document.getElementById("opponentHandDiv ");
+// const opponentHandDiv = document.getElementById("opponentHandDiv ");
 
 
 // list of field divs on the board, addressded via xy
@@ -30,6 +33,13 @@ var draggedCardPlaceholder: HTMLDivElement;
 var draggedCard: ClientCard = null;
 var draggedDivOffsetX: number = 0;
 var draggedDivOffsetY: number = 0;
+
+// MOVING / ACTIVE
+var activeCard: ClientCard = null;
+var activeCardX: number;
+var activeCardY: number;
+var activeCardCanActive: boolean = false;
+var activeCardCanMove: boolean = false;
 
 // when in blind stage, there are multiple placeholders.
 // we store them here
@@ -52,23 +62,92 @@ export function makeCardDiv(card: ClientCard): HTMLDivElement {
 
 	cardDiv.setAttribute('data-id', card.id.toString());
 
-	cardDiv.onmouseenter= () => { hoverCard(card); };
-	cardDiv.onmouseleave= () => { stopHover() };
+	cardDiv.onmouseenter = () => { hoverCard(card); };
+	cardDiv.onmouseleave = () => { stopHover() };
 
-	cardDiv.onmousedown = e => onCardDrag(card, cardDiv, e);
-	cardDiv.onclick = () => {
-		if (game.p1.active(card)) {
-			send({
-				message: 'active',
-				id: card.id,
-			});
+	cardDiv.onmousedown = e => {
+		if (!card.onBoard || game.inBlindStage) {
+			onCardDrag(card, e);
 		}
-	};
+		else if (card.onBoard) {
+			startActive(card);
+		}
+	}
 
 	cardDiv.appendChild(text);
 	cardDiv.appendChild(strength);
 
 	return cardDiv;
+}
+
+function startActive(card: ClientCard) {
+	if (card.owner !== game.p1 || game.turn !== game.p1)
+		return;
+
+	activeCardCanActive = !game.p1.usedActive;
+	activeCardCanMove = game.canMoveCards();
+
+	if (activeCardCanActive || activeCardCanMove) {
+		activeCard = card;
+		activeCardX = card.x;
+		activeCardY = card.y;
+
+		if (activeCardCanMove) {
+			game.p1.C_allowedMoveSquaresXY(card);
+			const allowedSquares = game.p1.C_allowedMoveSquaresXY(card);
+			for (const sq of allowedSquares)
+				fieldDivs[sq].classList.add('actionable');
+		}
+	}
+}
+
+export function desync(msg?: string) {
+	msg = "DESYNC" + (msg ? ("\n" + msg) : "");
+	console.trace(msg);
+	message(msg, 3);
+}
+
+function stopActive() {
+	if (activeCardX === activeCard.x && activeCardY === activeCard.y) {
+		if (activeCardCanActive) {
+			game.p1.active(activeCard);
+			gameDiv.classList.remove('canActive');
+		}
+	}
+	else if (activeCardCanMove) {
+		if (game.p1.S_canMoveCard(activeCardX, activeCardY, activeCard)) {
+			game.p1.S_moveCard(activeCardX, activeCardY, activeCard);
+			if (game.p1.movePoints === 0)
+				gameDiv.classList.remove('canMove');
+		}
+		else {
+			desync('From stopActive()');
+		}
+	}
+	activeCard = null;
+	for (const td of fieldDivs)
+		td.classList.remove('actionable');
+}
+
+function onMouseEnterField(x: number, y: number) {
+	if (activeCard && activeCardCanMove) {
+		if (y == activeCard.y)
+			x = activeCard.x + Math.sign(x - activeCard.x);
+		if (x == activeCard.x)
+			y = activeCard.y + Math.sign(y - activeCard.y);
+
+		if (game.p1.S_canMoveCard(x, y, activeCard) || (x == activeCard.x && y == activeCard.y)) {
+			fieldDivs[game._xy(x,y)].appendChild(activeCard.div);
+			activeCardX = x;
+			activeCardY = y;
+		}
+		else {
+			activeCardX = activeCard.x;
+			activeCardY = activeCard.y;
+			const fieldDiv = fieldDivs[game._xy(activeCard.x, activeCard.y)];
+			fieldDiv.appendChild(activeCard.div);
+		}
+	}
 }
 
 function hoverCard(card: ClientCard) {
@@ -103,6 +182,7 @@ export function onGameStarted() {
 			td.style.gridColumnStart = (x + 2).toString();
 			td.style.gridRowStart = (7 - y).toString();
 			td.classList.add('field');
+			td.onmouseenter = () => onMouseEnterField(x, y);
 
 			if (y < rules.ownHeight)
 				td.classList.add('myfield');
@@ -122,7 +202,7 @@ export function onGameStarted() {
 	gameDiv.classList.add('canPlay');
 }
 
-function onCardDrag(card: ClientCard, cardDiv: HTMLDivElement, event: MouseEvent) {
+function onCardDrag(card: ClientCard, event: MouseEvent) {
 	// not valid if we're currently dragging a card
 	if (draggedCard || card.owner !== game.p1)
 		return;
@@ -132,7 +212,7 @@ function onCardDrag(card: ClientCard, cardDiv: HTMLDivElement, event: MouseEvent
 		return false;
 	isDraggedCardFromHand = posInHand !== -1;
 
-	if (card.onBoard && !game.canMoveCards())
+	if (card.onBoard && !game.inBlindStage)
 		return false;
 
 	draggedCard = card;
@@ -143,10 +223,10 @@ function onCardDrag(card: ClientCard, cardDiv: HTMLDivElement, event: MouseEvent
 	for (const sq of allowedSquares)
 		fieldDivs[sq].classList.add('actionable');
 	gameDiv.classList.add('dragging');
-	cardDiv.classList.add('dragged');
-	cardDiv.style.transform = '';
+	card.div.classList.add('dragged');
+	card.div.style.transform = '';
 
-	if (isDraggedCardFromHand || game.stage === 'BlindStage')
+	if (isDraggedCardFromHand || game.inBlindStage)
 		myHandDiv.classList.add('actionable');
 
 	draggedCardPlaceholder = document.createElement('div');
@@ -154,9 +234,9 @@ function onCardDrag(card: ClientCard, cardDiv: HTMLDivElement, event: MouseEvent
 
 	if (isDraggedCardFromHand)
 		handPlaceholders[card.id] = draggedCardPlaceholder;
-	cardDiv.parentElement.insertBefore(draggedCardPlaceholder, cardDiv);
+	card.div.parentElement.insertBefore(draggedCardPlaceholder, card.div);
 
-	document.body.appendChild(cardDiv);
+	document.body.appendChild(card.div);
 	document.body.onmousemove = onMouseMove;
 	onMouseMove(event);
 }
@@ -194,13 +274,17 @@ function onDropOnGrid(x: number, y: number) {
 	if (isDraggedCardFromHand) {
 		if (game.p1.S_canPlayCardFromHand(x, y, draggedCard)) {
 			game.p1.S_playCardFromHand(x, y, draggedCard);
+
+			if (!game.canPlayCards())
+				gameDiv.classList.remove('canPlay');
 			stopDrag(false); 
 			return;
 		}
 	}
 	// We're a dragging a card from the board
 	else {
-		if (game.p1.moveCard(x, y, draggedCard)) {
+		if (game.p1.S_canMoveCard(x, y, draggedCard)) {
+			game.p1.S_moveCard(x, y, draggedCard);
 			stopDrag(false);
 			return;
 		}
@@ -216,7 +300,7 @@ myHandDiv.onmouseup = _e => {
 			stopDrag(true);
 		}
 		// Can only return cards from board if blindstage
-		else if (game.stage === 'BlindStage') {
+		else if (game.inBlindStage) {
 			const placeholder = handPlaceholders[draggedCard.id];
 			var prevCardDiv: Element = placeholder;
 			do {
@@ -245,7 +329,7 @@ function onMouseMove(event: MouseEvent) {
 }
 
 function ready() {
-	if (game.stage === 'BlindStage') {
+	if (game.inBlindStage) {
 		readyButton.disabled = true;
 		game.doneWithBlindStage();
 		gameDiv.classList.remove('canMove');
@@ -255,7 +339,7 @@ function ready() {
 		send({
 			message: 'skip'
 		});
-		game.nextStage();
+		game.nextTurn();
 	}
 }
 
@@ -269,68 +353,35 @@ export function blindStageOver() {
 	blindStageMessageDiv.style.display = 'none';
 }
 
-export function stageChanged() {
-	set('whoseturn', game.turn === game.p1 ? 'Your' : "Opponent's");
-	set('stage', game.stage);
-	gameDiv.classList.remove('canMove');
-	gameDiv.classList.remove('canPlay');
-	gameDiv.classList.remove('canActive');
-
-	readyButton.disabled  = game.turn !== game.p1;
-
+export function turnChanged() {
 	if (game.turn === game.p1) {
-		switch (game.stage) {
-			case 'Move': {
-				message('Your turn to move units', 0);
-				readyButton.innerText = 'End turn';
-				gameDiv.classList.add('canMove');
-				break;
-			}
-			case 'Play': {
-				message('Your turn to play a card from hand', 0);
-				gameDiv.classList.add('canPlay');
-				readyButton.innerText = 'Skip playing card';
-				break;
-			}
-			case 'Active': {
-				message('Your turn to use an active', 0);
-				gameDiv.classList.add('canActive');
-				readyButton.innerText = 'Skip using active';
-				break;
-			}
-		}
+		readyButton.disabled  = false;
+		gameDiv.classList.add('canMove');
+		gameDiv.classList.add('canPlay');
+		gameDiv.classList.add('canActive');
+		message('Your turn', 0);
+		readyButtonText.innerText = 'End Turn';
+		set('myMovePoints', game.p1.movePoints.toString());
 	}
 	else {
-
-		readyButton.innerText = "Opponent's turn";
-		switch (game.stage) {
-			case 'Move': {
-				message("Opponent's turn to move units", 1);
-				break;
-			}
-			case 'Play': {
-				message("Opponent's turn to play a card from hand", 1);
-				break;
-			}
-			case 'Active': {
-				message("Opponent's turn to use an active", 1);
-				break;
-			}
-		}
+		readyButton.disabled  = true;
+		gameDiv.classList.remove('canMove');
+		gameDiv.classList.remove('canPlay');
+		gameDiv.classList.remove('canActive');
+		readyButtonText.innerText = "Opponent's turn";
+		message('Opponent\'s turn', 1);
+		set('enemyMovePoints', game.p2.movePoints.toString());
 	}
 
-	set('myMovePoints', game.p1.movePoints.toString());
-	set('enemyMovePoints', game.p2.movePoints.toString());
 }
 
-export function message(msg: string, duration) {
+export function message(msg: string, duration: number) {
 	if (duration == 0) {
 		setTimeout(() => messageDiv.hidden = true, 2000);
 	}
 	else if (duration == 1) {
 		setTimeout(() => messageDiv.hidden = true, 1000);
 	}
-	console.log('mgs');
 	messageDiv.hidden = false;
 	messageStart = performance.now();
 	messageDiv.innerText = msg;

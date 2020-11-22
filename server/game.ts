@@ -108,56 +108,54 @@ export class ServerGame extends Game {
 		return card;
 	}
 
-	handleGameWsMessage(session: Session, message: Message) {
+	handleGameWsMessage(session: Session, message: Message): boolean {
 		const p = session === this.p1.session ? this.p1 : this.p2;
 
+		var r: number;
 		switch (message.message) {
-			case 'doneWithBlindStage': {
-				this.onPlayerDoneWithBlindStage(p, message as DoneWithBlindStageMessage);
-				return true;
-			}
-			case 'playCard': {
-				if (!this.handlePlayCard(p, message))
-					console.log('handlePlayCard fail');
-				return true;
-			}
-			case 'moveCard': {
-				if (!this.handleMoveCard(p, message))
-					console.log('handleMoveCard fail');
-				return true;
-			}
-			case 'skip': {
-				if (!this.handleSkip(p, message))
-					console.log('handleSkip fail');
-				return true;
-			}
-			case 'active': {
-				if (!this.handleActive(p, message))
-					console.log('handleActive fail');
-				return true;
-			}
+			case 'doneWithBlindStage': r = this.handleDWBS(p, message as any); break;
+			case 'playCard':           r = this.handlePlayCard(p, message);    break;
+			case 'moveCard':           r = this.handleMoveCard(p, message);    break;
+			case 'skip':               r = this.handleSkip(p, message);        break;
+			case 'active':             r = this.handleActive(p, message);      break;
+			default: return false;
 		}
+		if (r != 0) {
+			console.log(`Handler for ${message.message} failed @${r}`);
+			this.p1.send({ message: 'desync' });
+			this.p2.send({ message: 'desync' });
+			this.abortGame();
+			return false;
+		}
+		return true;
 	}
 
-	handleMoveCard(p: ServerPlayer, msg: Message): boolean {
+	abortGame() {
+		this.p1.session.lobby.game = null;
+		this.p2.session.lobby.game = null;
+	}
+
+	handleMoveCard(p: ServerPlayer, msg: Message): number {
 		// We need this because we don't accept move messages
 		// during the blind stage, canMoveCard would let them
 		// pass through
-		if (this.stage !== 'Move')
-			return false;
+		if (this.inBlindStage)
+			return 1;
 
 		var { id, x, y } = msg;
 		if (typeof id !== 'number' || !this.coordinatesValid(x, y))
-			return false;
+			return 2;
 		x = p.clientToServerX(x);
 		y = p.clientToServerY(y);
 
 		const card = this.cards[id];
 
-		if (!p.S_canMoveCard(x, y, card))
-			return false;
+		const cm = p.S_canMoveCard(x, y, card);
+		if (!cm) {
+			return 3;
+		}
 
-		this.putCard(x, y, card);
+		p.S_moveCard(x, y, card);
 
 		const otherPlayer = (this.otherPlayer(this.turn) as ServerPlayer);
 		otherPlayer.send({
@@ -167,42 +165,38 @@ export class ServerGame extends Game {
 			y: otherPlayer.clientToServerY(y),
 		});
 
-		// we don't notify the client for this, they can infer it
-		this.turn.movePoints -= 1;
-		if (this.turn.movePoints === 0)
-			this.nextStage(); 
-		return true;
+		return 0;
 	}
 
-	handleSkip(p: ServerPlayer, _msg: Message) {
+	handleSkip(p: ServerPlayer, _msg: Message): number {
 		if (this.turn !== p)
-			return false;
+			return 1;
 		const playerToNotify = this.otherPlayer(this.turn) as ServerPlayer;
 		playerToNotify.send({
-			message: 'nextStage'
+			message: 'endTurn'
 		});
-		if (this.stage === 'Play')
-			p.takeFatigue();
-		this.nextStage();
-		return true;
+		this.nextTurn();
+		return 0;
 	}
 
-	handlePlayCard(p: ServerPlayer, msg: Message): boolean {
+	handlePlayCard(p: ServerPlayer, msg: Message): number {
 		// We need this because we don't accept Play messages
 		// during the blind stage, canMoveCard would let them
 		// pass through
-		if (this.stage !== 'Play')
-			return false;
+		if (this.inBlindStage)
+			return 1;
 
 		var { id, x, y } = msg;
 		if (typeof id !== 'number' || !this.coordinatesValid(x, y))
-			return false;
+			return 2;
 		x = p.clientToServerX(x);
 		y = p.clientToServerY(y);
 
 		const card = this.cards[id];
-		if (!p.S_playCardFromHand(x, y, card))
-			return false;
+		if (!p.S_canPlayCardFromHand(x, y, card))
+			return 3;
+
+		p.S_playCardFromHand(x, y, card);
 
 		const otherPlayer = (this.otherPlayer(this.turn) as ServerPlayer);
 		otherPlayer.send({
@@ -212,67 +206,65 @@ export class ServerGame extends Game {
 			x: otherPlayer.clientToServerX(x),
 			y: otherPlayer.clientToServerY(y),
 		});
-		this.nextStage();
-		return true;
+		p.justPlayedCard = card;
+		return 0;
 	}
 
-	handleActive(p: ServerPlayer, msg: Message): boolean {
+	handleActive(p: ServerPlayer, msg: Message): number {
 		if (typeof msg.id !== 'number')
-			return false;
+			return 1;
 		const card = this.cards[msg.id];
 		if (card && p.active(card)) {
 			(this.otherPlayer(p) as ServerPlayer).send({
 				message: 'active',
 				id: card.id
 			});
-			return true;
+			return 2;
 		}
-		return false;
+		return 0;
 	}
 
-	onPlayerDoneWithBlindStage(p: ServerPlayer, msg: DoneWithBlindStageMessage): boolean {
+	handleDWBS(p: ServerPlayer, msg: DoneWithBlindStageMessage): number {
 		// Validate the message
-		if (this.stage !== 'BlindStage' 
-			|| !Array.isArray(msg.played) 
-				|| msg.played.length > this.rules.blindStageUnits)
-				return false;
+		if (!this.inBlindStage || p.doneWithBlindStage || !Array.isArray(msg.played) || msg.played.length > this.rules.blindStageUnits)
+			return 1;
 
-				const takenxy = [];
-				for (const cardInfo of msg.played) {
-					let [id, x, y] = cardInfo;
-					if (typeof id !== 'number' || !this.coordinatesValid(x, y))
-						return false;
+		const takenxy = [];
+		for (const cardInfo of msg.played) {
+			let [id, x, y] = cardInfo;
+			if (typeof id !== 'number' || !this.coordinatesValid(x, y))
+				return 2;
 
-					const card = this.cards[id];
-					x = p.clientToServerX(x);
-					y = p.clientToServerY(y);
+			const card = this.cards[id];
+			x = p.clientToServerX(x);
+			y = p.clientToServerY(y);
 
-					if (!p.S_canPlayCardFromHand(x, y, card))
-						return false;
+			if (!p.S_canPlayCardFromHand(x, y, card))
+				return 3;
 
-					// Make sure there aren't two cards with the same coords
-					// from the ones the player wants to play
-					const xy = this._xy(x, y);
-					if (takenxy.indexOf(xy) !== -1)
-						return false;
-					takenxy.push(xy);
-				}
+			// Make sure there aren't two cards with the same coords
+			// from the ones the player wants to play
+			const xy = this._xy(x, y);
+			if (takenxy.indexOf(xy) !== -1)
+				return 4;
+			takenxy.push(xy);
+		}
 
-				for (const cardInfo of msg.played) {
-					let [id, x, y] = cardInfo;
-					const card = this.cards[id];
+		for (const cardInfo of msg.played) {
+			let [id, x, y] = cardInfo;
+			const card = this.cards[id];
 
-					x = p.clientToServerX(x);
-					y = p.clientToServerY(y);
+			x = p.clientToServerX(x);
+			y = p.clientToServerY(y);
 
-					p.S_playCardFromHand(x, y, card);
-				}
+			p.S_playCardFromHand(x, y, card);
+		}
 
-				p.doneWithBlindStage = true;
-				if ((this.otherPlayer(p) as ServerPlayer).doneWithBlindStage)
-					this.blindStageOver();
+		p.doneWithBlindStage = true;
+		if ((this.otherPlayer(p) as ServerPlayer).doneWithBlindStage)
+			this.blindStageOver();
 
-				return true;
+		return 0;
 	}
 
 	blindStageOver() {
@@ -280,7 +272,7 @@ export class ServerGame extends Game {
 		const str2 = this.p2.strength;
 
 		this.turn = str1 >= str2 ? this.p1 : this.p2;
-		this.nextStage();
+		this.firstTurn();
 
 		this.p1.send({
 			message: 'blindStageOver',
@@ -291,7 +283,6 @@ export class ServerGame extends Game {
 				this.p1.clientToServerY(unit.y)
 			]),
 			myTurn: this.turn === this.p1,
-			gameStage: this.stage
 		} as BlindStageOverMessage);
 
 		this.p2.send({
@@ -303,7 +294,6 @@ export class ServerGame extends Game {
 				this.p2.clientToServerY(unit.y)
 			]),
 			myTurn: this.turn === this.p2,
-			gameStage: this.stage
 		} as BlindStageOverMessage);
 
 	}

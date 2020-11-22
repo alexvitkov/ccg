@@ -283,23 +283,21 @@ fieldset {
 	margin: 0;
 	padding: 0;
 	border: 1px solid black;
-	position: relative;
 	background: #573657;
-}
 
-.field > .card, .field > .placeholder {
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 
 .card {
-	font-size: 2.5vh;
-	position: relative;
-	z-index: 5;
 	background: var(--card-bg);
+	flex: 0 0 0;
+	position: relative;
+	font-size: 2.5vh;
+	z-index: 5;
+	transition = 'transform 0.3s';
 }
 
 .card, .placeholder {
@@ -414,14 +412,8 @@ fieldset {
 	margin-bottom: 1vh;
 }
 
-.stage2 {
-	flex: 0 0 0;
-	font-size: 2.5vh;
-	text-align: center;
-}
-
 .playerInfo {
-	flex: 2 0 0;
+	flex: 3 0 0;
 }
 
 .strength {
@@ -435,21 +427,24 @@ fieldset {
 	font-weight: bold;
 }
 
-.readyButtonContainer {
+#readyButton {
 	max-width: 32vh;
 	flex: 1 0 0;
 	display: flex;
 	flex-direction: column;
+	align-items: center;
+	justify-content: center;
 }
 
-#readyButton {
-	flex: 1 0 0;
+#readyButtonText {
+	flex: 0 0 0;
 }
 
-
-.damageText, .healText {
+.damageText, 
+.healText 
+{
 	position: absolute;
-	z-index: 15;
+	z-index: 20;
 	background: rgba(255, 0, 0, 0.5);
 	top: 0;
 	left: 0;
@@ -457,7 +452,6 @@ fieldset {
 	bottom: 0;
 	color: red;
 	margin: 0;
-	padding: 0;
 	font-size: 5vh;
 	text-align: center;
 	-webkit-text-stroke: 1px black;

@@ -1,6 +1,6 @@
 import * as messages from '../messages';
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
-import { set, blindStageOver, stageChanged as onStageChanged, makeCardDiv, fieldDivs } from './gameHtml';
+import { set, blindStageOver, turnChanged, makeCardDiv, fieldDivs, desync } from './gameHtml';
 import { send } from './main';
 import * as ve from './viewevent';
 import { Effect } from '../effects';
@@ -8,7 +8,10 @@ import { Effect } from '../effects';
 export var game: ClientGame;
 export var rules: GameRules;
 
-function highlight(game: Game, card, effect: Effect) {
+// this takes the effect and transforms it a bit
+// it adds some animations so the card goes up in the air a bit
+// while the effect is playing
+function highlight(game: Game, card: ClientCard, effect: Effect) {
 	const oldEffect = effect.effect;
 	effect.effect = () => {
 		game.push(() => ve.beginHightlight(card));
@@ -54,51 +57,41 @@ export class ClientPlayer extends Player {
 		super(game, isPlayer2);
 	}
 
-	S_playCardFromHand(x: number, y: number, card: ClientCard): boolean {
-		if (!super.S_playCardFromHand(x, y, card))
-			return false;
-
-		if (game.stage === 'Play') {
+	S_playCardFromHand(x: number, y: number, card: ClientCard) {
+		super.S_playCardFromHand(x, y, card);
+		if (!game.inBlindStage) {
 			send({
 				message: 'playCard',
 				id: card.id,
 				x: x,
 				y: y
 			});
-			game.nextStage();
 		}
 		return true;
 	}
 
-	moveCard(x: number, y: number, card: ClientCard): boolean {
-		if (!game.p1.S_canMoveCard(x, y, card))
-			return false;
-		this.game.putCard(x, y, card);
-
-		if (this.game.stage === 'Move') {
-			this.movePoints -= 1;
+	S_moveCard(x: number, y: number, card: ClientCard) {
+		super.S_moveCard(x, y, card);
+		if (!this.game.inBlindStage && !this.isPlayer2) {
 			set('myMovePoints', this.movePoints.toString());
-			if (this.movePoints == 0) {
-				game.nextStage();
-			}
+			console.log('Sending moveCard');
 			send({
 				message: 'moveCard',
 				id: card.id,
 				x: x,
 				y: y
 			});
+			set(this.isPlayer2 ? 'enemyMovePoints' : 'myMovePoints', this.movePoints.toString());
 		}
-
-		return true;
 	}
 
 	C_allowedMoveSquaresXY(card: Card): number[] {
 		const squares = [];
 		// We're playing a card, valid squares are our side of the board
-		if (!card.onBoard || game.stage === 'BlindStage') {
+		if (!card.onBoard || game.inBlindStage) {
 			for (let y = 0; y < this.game.rules.ownHeight; y++)
 			for (let x = 0; x < this.game.rules.boardWidth; x++) {
-				if (!game.getBoard(x, y) || (game.stage === 'BlindStage' && x === card.x && y === card.y))
+				if (!game.getBoard(x, y) || (game.inBlindStage && x === card.x && y === card.y))
 					squares.push(this.game._xy(x, y));
 			}
 		}
@@ -153,6 +146,16 @@ export class ClientGame extends Game {
 			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
 	}
 
+	firstTurn() {
+		super.firstTurn();
+		turnChanged();
+	}
+
+	nextTurn() {
+		super.nextTurn();
+		turnChanged();
+	}
+
 	push(effect: () => any) {
 		if (this.group === 0)
 			this.currentEfect = this.currentEfect.then(effect);
@@ -175,11 +178,6 @@ export class ClientGame extends Game {
 		}
 	}
 
-	nextStage() {
-		super.nextStage();
-		onStageChanged();
-	}
-
 	instantiate(id: number, owner: Player, proto: CardProto) {
 		const card = new ClientCard(id, owner, proto);
 		this.cards[id] = card;
@@ -200,8 +198,8 @@ export class ClientGame extends Game {
 			this.putCard(x, y, card);
 		}
 		this.turn = msg.myTurn ? this.p1 : this.p2;
+		this.firstTurn();
 		blindStageOver();
-		this.nextStage();
 	}
 
 	putCard(x: number, y: number, card: ClientCard): boolean {
@@ -213,18 +211,23 @@ export class ClientGame extends Game {
 	}
 
 	canPlayCards() {
-		if (this.stage === 'BlindStage')
+		if (this.inBlindStage)
 			return !this.p1.doneWithBlindStage && this.p1.getUnits().length < this.rules.blindStageUnits;
-		else return this.stage === 'Play' && this.turn === this.p1;
+		else 
+			return this.turn === this.p1 && !this.p1.justPlayedCard;
 	}
 
-	canMoveCards() {
-		return (this.stage === 'BlindStage' && !this.doneWithBlindStage)
-			|| (this.stage == 'Move' && this.turn === this.p1)
+	canMoveCards(): boolean {
+		if (this.inBlindStage) return !this.doneWithBlindStage;
+		return this.turn === this.p1 && this.p1.movePoints > 0;
 	}
 
 	handleMessage(msg: messages.Message): boolean {
 		switch (msg.message) {
+			case 'desync': {
+				desync('Notified by server');
+				break;
+			}
 			case 'blindStageOver': {
 				this.blindStageOver(msg as messages.BlindStageOverMessage);
 				break;
@@ -233,20 +236,16 @@ export class ClientGame extends Game {
 				const { id, cardID, x, y } = msg;
 				this.instantiate(id, this.p2, this.rules.cardSet[cardID]);
 				this.putCard(x, y, this.cards[id]);
-				this.nextStage();
+				this.p2.justPlayedCard = this.cards[id];
 				break;
 			}
 			case 'opponentMovedCard': {
 				const { id, x, y } = msg;
-				this.putCard(x, y, this.cards[id]);
-				this.p2.movePoints -= 1;
-				if (this.p2.movePoints == 0)
-					this.nextStage();
-				set('enemyMovePoints', this.p2.movePoints.toString());
+				this.p2.S_moveCard(x, y, this.cards[id]);
 				break;
 			}
-			case 'nextStage': {
-				this.nextStage();
+			case 'endTurn': {
+				this.nextTurn();
 				break;
 			}
 			case 'active': {

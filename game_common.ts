@@ -86,6 +86,11 @@ export class Player {
 	fatigue: number;
 	doneWithBlindStage: boolean;
 
+	// These get rest every turn
+	justPlayedCard: Card = null;
+	justMovedCards: Card[] = [];
+	usedActive: boolean = false;
+
 	sot: Effect[] = [];
 	eot: Effect[] = [];
 
@@ -97,12 +102,20 @@ export class Player {
 		this.isPlayer2 = isPlayer2;
 	}
 
+	canActive(card: Card) {
+		return card.active 
+			&& card.owner === this 
+			&& card.onBoard 
+			&& !this.justMovedCards.includes(card)
+			&& !this.usedActive 
+			&& this.game.turn === this
+			&& !this.justMovedCards.includes(card);
+	}
+
 	active(card: Card): boolean {
-		if (card.active && card.owner === this && card.onBoard 
-			&& this.game.stage === 'Active' && this.game.turn === this)
-		{
+		if (this.canActive(card)) {
 			card.active.effect(); 
-			this.game.nextStage();
+			this.usedActive = true;
 			return true;
 		}
 		return false;
@@ -120,7 +133,7 @@ export class Player {
 			return false;
 
 		// if it's blind stage respect the unit count limit
-		if (this.game.stage === 'BlindStage' 
+		if (this.game.inBlindStage
 			&& this.getUnits().length >= this.game.rules.blindStageUnits)
 			return false;
 
@@ -137,12 +150,12 @@ export class Player {
 			return false;
 
 		// we can only play cards in blind stage
-		// or during our play turn
-		return this.game.stage === 'BlindStage' ||
-			(this.game.stage === 'Play' && this.game.turn === this);
+		// or just one card per our turn
+		return this.game.inBlindStage ||
+			(!this.justPlayedCard && this.game.turn === this);
 	}
 
-	S_canMoveCard(x: number, y: number, card: Card) {
+	S_canMoveCard(x: number, y: number, card: Card): boolean {
 		// validate coordinates
 		if (!this.game.coordinatesValid(x, y))
 			return false;
@@ -157,7 +170,7 @@ export class Player {
 
 		// if we're in blind stage, we can freely move cards
 		// on our side of the board
-		if (this.game.stage === 'BlindStage') {
+		if (this.game.inBlindStage) {
 			if (this.isPlayer2 && y < this.game.rules.boardHeight - this.game.rules.ownHeight)
 				return false;
 			if (!this.isPlayer2 && y >= this.game.rules.ownHeight)
@@ -165,8 +178,8 @@ export class Player {
 			return true;
 		}
 
-		// if we're not in blind stage, we can only move in our move stage and if we have points
-		if (this.game.stage !== 'Move' || this.game.turn !== this || this.movePoints <= 0)
+		// if we're not in blind stage, we can move if we have points
+		if (this.game.turn !== this || this.movePoints <= 0)
 			return false;
 
 		// we can move cards by one field horizontally or vertically
@@ -175,14 +188,21 @@ export class Player {
 		return Math.abs(dx) + Math.abs(dy) == 1;
 	}
 
-	// returns false only if card not in hand or board position taken
-	S_playCardFromHand(x: number, y: number, card: Card): boolean {
-		const posInHand = this.hand.indexOf(card);
-		if (posInHand === -1)
-			return false;
+	S_moveCard(x: number, y: number, card: Card) {
+		this.game.putCard(x, y, card);
+		if (!this.game.inBlindStage) {
+			this.movePoints -= 1;
+			if (!this.justMovedCards.includes(card))
+				this.justMovedCards.push(card);
+		}
+	}
 
+	S_playCardFromHand(x: number, y: number, card: Card) {
+		const posInHand = this.hand.indexOf(card);
 		this.hand.splice(posInHand, 1);
-		return this.game.putCard(x, y, card);
+		if (!this.game.inBlindStage)
+			this.justPlayedCard = card;
+		this.game.putCard(x, y, card);
 	}
 
 	get strength(): number {
@@ -194,11 +214,9 @@ export class Player {
 	}
 }
 
-export type Stage = 'BlindStage' | 'Play' | 'Active' | 'Move';
-
 export class Game {
 	rules: GameRules;
-	stage: Stage;
+	inBlindStage: boolean;
 	turn: Player;
 
 	p1: Player;
@@ -211,41 +229,38 @@ export class Game {
 		this.cards = {};
 		this._board = {};
 		this.rules = rules;
-		this.stage = 'BlindStage';
+		this.inBlindStage = true;
 	}
 
-	nextStage() {
-		switch (this.stage) {
-			case 'Play': {
-				this.stage = 'Active';
-				break;
-			}
-			case 'Active': {
-				this.stage = 'Move';
-				break;
-			}
-			case 'Move': 
-				// Trigger EOT effects for player who just finished his turn
-				this.turn.eot = this.turn.eot.filter(c => c.card.onBoard);
-				for (const e of this.turn.eot)
-					e.effect();
+	firstTurn() {
+		this.inBlindStage = false;
 
-				// Switch player
-				this.turn = this.otherPlayer(this.turn);
-				// FALLTHROUGH
-			case 'BlindStage':
-				this.stage = 'Play';
-				this.turn.movePoints += this.rules.movePointsPerTurn;
-				if (this.turn.movePoints > this.rules.maxMovePoints)
-					this.turn.movePoints = this.rules.maxMovePoints;
+		// Give move points to the new player
+		this.turn.movePoints += this.rules.movePointsPerTurn;
+		if (this.turn.movePoints > this.rules.maxMovePoints)
+			this.turn.movePoints = this.rules.maxMovePoints;
 
-				// Trigger SOT effects for the player who just started his turn
-				this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
-				for (const e of this.turn.sot) {
-					e.effect();
-				}
-			break;
-		}
+		this.turn.justMovedCards.length = 0;
+		this.turn.justPlayedCard = null;
+		this.turn.usedActive = false;
+	}
+
+	nextTurn() {
+		// Trigger EOT effects for player who just finished his turn
+		this.turn.eot = this.turn.eot.filter(c => c.card.onBoard);
+		for (const e of this.turn.eot)
+			e.effect();
+
+		// Switch player
+		this.turn = this.otherPlayer(this.turn);
+
+		// Give move points to the new player
+		this.firstTurn();
+
+		// Trigger SOT effects for new player
+		this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
+		for (const e of this.turn.sot)
+			e.effect();
 	}
 
 	getBoard(x: number, y: number) {
@@ -254,7 +269,7 @@ export class Game {
 
 	beginGroup() {}
 	endGroup() {}
-	push(_x) {}
+	push(_x: any) {}
 
 	_xy(x: number, y: number) {
 		return y * this.rules.boardWidth + x;
