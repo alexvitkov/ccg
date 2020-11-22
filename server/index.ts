@@ -167,6 +167,7 @@ async function createSession(userId: Buffer, password: string) {
 expressApp.get('/', async (req, res) => {
 	const sessionCookie = req.cookies.session;
 
+	// TODO this fails if DB is not yet connected to
 	if (typeof sessionCookie === 'string') {
 		const sessionDb = await sessionsColl.findOne({cookie: sessionCookie});
 		if (!sessionDb) {
@@ -256,5 +257,5 @@ expressApp.get('/usernameTaken', async (req: express.Request, res: express.Respo
 });
 
 
-runExpress();
 runMongo();
+runExpress();

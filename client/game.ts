@@ -247,6 +247,7 @@ export class ClientGame extends Game {
 			}
 			case 'gameOver': {
 				this.gameOver(msg.won ? this.p1 : this.p2);
+				break;
 			}
 			case 'blindStageOver': {
 				this.blindStageOver(msg as messages.BlindStageOverMessage);
