@@ -2,10 +2,19 @@ import { game, ClientCard, rules } from './game';
 import { send } from './main';
 
 const gameDiv = document.getElementById("game");
+gameDiv.onmouseup = _e => { 
+	if (!messageDiv.hidden && performance.now() - messageStart > 300)
+	    messageDiv.hidden = true;
+	if (draggedCard) { stopDrag(true); } 
+};
+
 const blindStageMessageDiv = document.getElementById('blindStageMessage');
+const messageDiv = document.getElementById('message');
+var messageStart: number;
+
 const readyButton: HTMLButtonElement = document.getElementById("readyButton") as any;
+const stageInfoAboveButton = document.getElementsByClassName('stage2')[0];
 readyButton.onclick = ready;
-gameDiv.onmouseup = _e => { if (draggedCard) { stopDrag(true); } };
 
 const myHandDiv = document.getElementById("myHand");
 const opponentHandDiv = document.getElementById("opponentHandDiv ");
@@ -267,21 +276,44 @@ export function stageChanged() {
 	gameDiv.classList.remove('canPlay');
 	gameDiv.classList.remove('canActive');
 
-	readyButton.innerText = game.turn === game.p1 ? 'Skip ' + game.stage : "Opponent's turn";
 	readyButton.disabled  = game.turn !== game.p1;
 
 	if (game.turn === game.p1) {
 		switch (game.stage) {
 			case 'Move': {
+				message('Your turn to move units', 0);
+				readyButton.innerText = 'End turn';
 				gameDiv.classList.add('canMove');
 				break;
 			}
 			case 'Play': {
+				message('Your turn to play a card from hand', 0);
 				gameDiv.classList.add('canPlay');
+				readyButton.innerText = 'Skip playing card';
 				break;
 			}
 			case 'Active': {
+				message('Your turn to use an active', 0);
 				gameDiv.classList.add('canActive');
+				readyButton.innerText = 'Skip using active';
+				break;
+			}
+		}
+	}
+	else {
+
+		readyButton.innerText = "Opponent's turn";
+		switch (game.stage) {
+			case 'Move': {
+				message("Opponent's turn to move units", 1);
+				break;
+			}
+			case 'Play': {
+				message("Opponent's turn to play a card from hand", 1);
+				break;
+			}
+			case 'Active': {
+				message("Opponent's turn to use an active", 1);
 				break;
 			}
 		}
@@ -289,4 +321,17 @@ export function stageChanged() {
 
 	set('myMovePoints', game.p1.movePoints.toString());
 	set('enemyMovePoints', game.p2.movePoints.toString());
+}
+
+export function message(msg: string, duration) {
+	if (duration == 0) {
+		setTimeout(() => messageDiv.hidden = true, 2000);
+	}
+	else if (duration == 1) {
+		setTimeout(() => messageDiv.hidden = true, 1000);
+	}
+	console.log('mgs');
+	messageDiv.hidden = false;
+	messageStart = performance.now();
+	messageDiv.innerText = msg;
 }
