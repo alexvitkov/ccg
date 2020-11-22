@@ -40,6 +40,8 @@ export class Card {
 
 	die() {
 		this.owner.game.liftCard(this);
+		if (this.owner.getUnits().length === 0)
+			this.owner.game.gameOver(this.owner.game.otherPlayer(this.owner));
 	}
 
 	takeDamage(damage: number) {
@@ -105,7 +107,8 @@ export class Player {
 	S_takeFatigue() {
 		let highestUnit: Card = this.getUnits()[0];
 		if (!highestUnit) {
-			// TODO lose the game here
+			this.game.gameOver(this.game.otherPlayer(this));
+			return;
 		}
 
 		for (const unit of this.getUnits()) {
@@ -243,6 +246,8 @@ export class Game {
 	inBlindStage: boolean;
 	turn: Player;
 
+	isGameOver: boolean = false;
+
 	p1: Player;
 	p2: Player;
 
@@ -267,6 +272,10 @@ export class Game {
 		this.turn.justMovedCards.length = 0;
 		this.turn.justPlayedCard = null;
 		this.turn.usedActive = false;
+	}
+
+	gameOver(winner: Player) {
+		this.isGameOver = true;
 	}
 
 	nextTurn() {

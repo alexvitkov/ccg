@@ -30,33 +30,6 @@ class ServerPlayer extends Player {
 		this.session = session;
 	}
 
-	takeFatigue() {
-		let highestUnits = [];
-		let highestUnitStr = 0;
-
-		for (const unit of this.getUnits()) {
-			if (unit.strength > highestUnitStr) {
-				highestUnitStr = unit.strength;
-				highestUnits = [unit];
-			} else if (unit.strength === highestUnitStr) {
-				highestUnits.push(unit);
-			}
-		}
-
-		if (highestUnits.length > 0) {
-			const unit = highestUnits[Math.floor(Math.random() * highestUnits.length)];
-			unit.takeDamage(this.fatigue);
-			const msg = {
-				message: 'fatigue',
-				id: unit.id
-			};
-			this.game.p1.send(msg);
-			this.game.p2.send(msg);
-		}
-
-		this.fatigue++;
-	}
-
 	clientToServerX(x: number) {
 		return this.isPlayer2 ? (this.game.rules.boardWidth - x - 1) : x;
 	}
@@ -96,6 +69,20 @@ export class ServerGame extends Game {
 			hand: this.p1.hand.map(c => [c.id, c.proto.cardID]),
 			opponentHandSize: this.p2.hand.length
 		} as GameStartedMessage);
+	}
+
+	gameOver(winner: ServerPlayer) {
+		super.gameOver(winner);
+
+		winner.send({
+			message: 'gameOver',
+			won: true
+		});
+		(this.otherPlayer(winner) as ServerPlayer).send({
+			message: 'gameOver',
+			won: false
+		});
+		this.abortGame();
 	}
 
 	instantiate(owner: Player, proto: CardProto) {
@@ -219,9 +206,9 @@ export class ServerGame extends Game {
 				message: 'active',
 				id: card.id
 			});
-			return 2;
+			return 0;
 		}
-		return 0;
+		return 2;
 	}
 
 	handleDWBS(p: ServerPlayer, msg: DoneWithBlindStageMessage): number {

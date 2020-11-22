@@ -1,6 +1,6 @@
 import * as messages from '../messages';
 import { Card, Player, Game, GameRules, CardProto } from '../game_common';
-import { set, blindStageOver, turnChanged, makeCardDiv, fieldDivs, desync } from './gameHtml';
+import { set, blindStageOver, turnChanged, makeCardDiv, fieldDivs, desync, gameOver } from './gameHtml';
 import { send } from './main';
 import * as ve from './viewevent';
 import { Effect } from '../effects';
@@ -55,6 +55,19 @@ export class ClientPlayer extends Player {
 
 	constructor(game: ClientGame, isPlayer2: boolean) {
 		super(game, isPlayer2);
+	}
+
+	active(card: Card): boolean {
+		if (super.active(card)) {
+			if (!this.isPlayer2) {
+				send({
+					message: 'active',
+					id: card.id
+				});
+			}
+			return true;
+		}
+		return false;
 	}
 
 	S_playCardFromHand(x: number, y: number, card: ClientCard) {
@@ -217,6 +230,10 @@ export class ClientGame extends Game {
 			return this.turn === this.p1 && !this.p1.justPlayedCard;
 	}
 
+	gameOver(winner: Player) {
+		gameOver(winner === this.p1);
+	}
+
 	canMoveCards(): boolean {
 		if (this.inBlindStage) return !this.doneWithBlindStage;
 		return this.turn === this.p1 && this.p1.movePoints > 0;
@@ -227,6 +244,9 @@ export class ClientGame extends Game {
 			case 'desync': {
 				desync('Notified by server');
 				break;
+			}
+			case 'gameOver': {
+				this.gameOver(msg.won ? this.p1 : this.p2);
 			}
 			case 'blindStageOver': {
 				this.blindStageOver(msg as messages.BlindStageOverMessage);

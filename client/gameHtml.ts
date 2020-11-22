@@ -3,7 +3,7 @@ import { send } from './main';
 
 const gameDiv = document.getElementById("game");
 gameDiv.onmouseup = _e => { 
-	if (!messageDiv.hidden && performance.now() - messageStart > 300)
+	if (!messagePersistent && !messageDiv.hidden && performance.now() - messageStart > 300)
 	    messageDiv.hidden = true;
 	if (draggedCard) { stopDrag(true); } 
 	if (activeCard) {
@@ -13,6 +13,7 @@ gameDiv.onmouseup = _e => {
 
 const blindStageMessageDiv = document.getElementById('blindStageMessage');
 const messageDiv = document.getElementById('message');
+var messagePersistent: boolean = false;
 var messageStart: number;
 
 const readyButton: HTMLButtonElement = document.getElementById("readyButton") as any;
@@ -104,7 +105,7 @@ function startActive(card: ClientCard) {
 export function desync(msg?: string) {
 	msg = "DESYNC" + (msg ? ("\n" + msg) : "");
 	console.trace(msg);
-	message(msg, 3);
+	message(msg, 3, -1);
 }
 
 function stopActive() {
@@ -372,16 +373,28 @@ export function turnChanged() {
 		message('Opponent\'s turn', 1);
 		set('enemyMovePoints', game.p2.movePoints.toString());
 	}
+}
 
+export function gameOver(win: boolean) {
+	message(win ? "you win bro" : "you lose bro", -1);
+	gameDiv.classList.remove('canMove');
+	gameDiv.classList.remove('canPlay');
+	gameDiv.classList.remove('canActive');
+	readyButtonText.innerText = ":D";
 }
 
 export function message(msg: string, duration: number) {
-	if (duration == 0) {
-		setTimeout(() => messageDiv.hidden = true, 2000);
+	if (duration < 0)
+		messagePersistent = true;
+	else {
+		if (duration == 0) {
+			setTimeout(() =>  { if (!messagePersistent) messageDiv.hidden = true}, 2000);
+		}
+		else if (duration == 1) {
+			setTimeout(() => { if (!messagePersistent) messageDiv.hidden = true }, 1000);
+		}
 	}
-	else if (duration == 1) {
-		setTimeout(() => messageDiv.hidden = true, 1000);
-	}
+
 	messageDiv.hidden = false;
 	messageStart = performance.now();
 	messageDiv.innerText = msg;

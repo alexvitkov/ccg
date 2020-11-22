@@ -31,6 +31,8 @@ export function TakeDamage(card: ClientCard, oldStr: number, dmg: number) {
 		(card.div.getElementsByClassName('strength')[0] as HTMLElement).innerText 
 			= (oldStr - dmg).toString();
 
+		card.owner.recalculateStrength();
+
 		await sleep(800);
 		div.remove();
 	}
