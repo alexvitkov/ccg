@@ -64,10 +64,11 @@ export function makeCardDiv(card: ClientCard): HTMLDivElement {
 
 function hoverCard(card: ClientCard) {
 	document.getElementById('sidebar1').innerHTML = card.proto.cardDescription;
+	document.getElementById('sidebar1').hidden = false;
 }
 
 function stopHover() {
-	document.getElementById('sidebar1').innerText = '';
+	document.getElementById('sidebar1').hidden = true;
 }
 
 export function onGameStarted() {

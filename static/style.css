@@ -218,10 +218,48 @@ fieldset {
 	overflow: hidden;
 }
 
+#sidebar1 {
+	grid-column: 9;
+	grid-row: 2 / span 6;
+	font-size: 3vh;
+	color: #bd91a5;
+	text-align: center;
+	background: #241729;
+}
+
+#sidebar1 h1 {
+	font-size: 0.9em;
+	border-bottom: 0.2vh solid #bd91a5;
+	margin-bottom: 0;
+	margin-top: 5vh;
+	text-align: left;
+}
+
+#sidebar2 {
+	padding: 2vh;
+	grid-column: 9;
+	grid-row: 2 / span 6;
+
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+#sidebar2 * {
+	margin: 0;
+	padding: 0;
+}
+
+
+
 @media (min-aspect-ratio: 13/8) {
 	#game {
 		grid-template-columns: 3fr 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 12.5vh 3fr;
 		grid-template-rows: repeat(8, 12.5vh);
+	}
+
+	#sidebar1 {
+		grid-column: 1;
 	}
 }
 
@@ -363,37 +401,6 @@ fieldset {
 #blindStageMessage > p {
 	margin: 0;
 	margin-bottom: 1vh;
-}
-
-#sidebar1 {
-	grid-column: 1;
-	grid-row: 2 / span 6;
-	font-size: 3vh;
-	color: #bd91a5;
-	text-align: center;
-}
-
-#sidebar1 h1 {
-	font-size: 0.9em;
-	border-bottom: 0.2vh solid #bd91a5;
-	margin-bottom: 0;
-	margin-top: 5vh;
-	text-align: left;
-}
-
-#sidebar2 {
-	padding: 2vh;
-	grid-column: 9;
-	grid-row: 2 / span 6;
-
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-}
-
-#sidebar2 * {
-	margin: 0;
-	padding: 0;
 }
 
 .stage2 {
