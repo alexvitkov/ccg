@@ -102,6 +102,30 @@ export class Player {
 		this.isPlayer2 = isPlayer2;
 	}
 
+	S_takeFatigue() {
+		let highestUnit: Card = this.getUnits()[0];
+		if (!highestUnit) {
+			// TODO lose the game here
+		}
+
+		for (const unit of this.getUnits()) {
+			if (unit.strength > highestUnit.strength)
+				highestUnit = unit;
+			else if (unit.strength === highestUnit.strength) {
+				if (this.isPlayer2) {
+					if (unit.y > highestUnit.y || (unit.y === highestUnit.y && unit.x > highestUnit.x))
+						highestUnit = unit;
+				}
+				else {
+					if (unit.y < highestUnit.y || (unit.y === highestUnit.y && unit.x < highestUnit.x))
+						highestUnit = unit;
+				}
+			}
+		}
+		highestUnit.takeDamage(this.fatigue);
+		this.fatigue++;
+	}
+
 	canActive(card: Card) {
 		return card.active 
 			&& card.owner === this 
@@ -246,6 +270,9 @@ export class Game {
 	}
 
 	nextTurn() {
+		if (!this.turn.justPlayedCard)
+			this.turn.S_takeFatigue();
+
 		// Trigger EOT effects for player who just finished his turn
 		this.turn.eot = this.turn.eot.filter(c => c.card.onBoard);
 		for (const e of this.turn.eot)
@@ -298,6 +325,7 @@ export class Game {
 		card.y = y;
 		return true;
 	}
+
 
 	coordinatesValid(x: number, y: number): boolean {
 		return Number.isInteger(x) && Number.isInteger(y)
