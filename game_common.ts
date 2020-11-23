@@ -1,7 +1,7 @@
-import { effects, Effect } from './effects';
+import { effects, EffectInstance, EffectPreset, instantiateEffect } from './effects';
 
 export class CardProto {
-	cardID: number;
+	protoID: number;
 	cardName: string;
 	cardDescription: string;
 	baseStrength: number;
@@ -11,12 +11,12 @@ export class CardProto {
 	eot: string;
 	cardLetter: string;
 
-	constructor(cardID: number, cardName: string, desc: string, baseStrength: number, cardLetter: string, active?: string, sot?: string, eot?: string) {
-		this.cardID=cardID;
-		this.cardName=cardName;
+	constructor(protoID: number, cardName: string, desc: string, baseStrength: number, cardLetter: string, active?: string, sot?: string, eot?: string) {
+		this.protoID = protoID;
+		this.cardName = cardName;
 		this.cardDescription = desc;
-		this.baseStrength=baseStrength;
-		this.cardLetter=cardLetter;
+		this.baseStrength = baseStrength;
+		this.cardLetter = cardLetter;
 		this.active = active;
 		this.sot = sot;
 		this.eot = eot;
@@ -30,9 +30,9 @@ export class Card {
 	strength: number;
 	x: number;
 	y: number;
-	active: Effect;
-	sot: Effect;
-	eot: Effect;
+	active: EffectInstance;
+	sot: EffectInstance;
+	eot: EffectInstance;
 
 	get onBoard() {
 		return this.x >= 0;
@@ -58,11 +58,11 @@ export class Card {
 		this.x = -1;
 		this.y = -1;
 		if (proto.active)
-			this.active = effects[proto.active](owner.game, this);
+			this.active = instantiateEffect(this, proto.active);
 		if (proto.sot)
-			this.sot = effects[proto.sot](owner.game, this);
+			this.active = instantiateEffect(this, proto.sot);
 		if (proto.eot)
-			this.eot = effects[proto.eot](owner.game, this);
+			this.active = instantiateEffect(this, proto.eot);
 	}
 }
 
@@ -93,8 +93,8 @@ export class Player {
 	justMovedCards: Card[] = [];
 	usedActive: boolean = false;
 
-	sot: Effect[] = [];
-	eot: Effect[] = [];
+	sot: EffectInstance[] = [];
+	eot: EffectInstance[] = [];
 
 	constructor(game: Game, isPlayer2: boolean) {
 		this.game = game;
@@ -141,7 +141,7 @@ export class Player {
 
 	active(card: Card): boolean {
 		if (this.canActive(card)) {
-			card.active.effect(); 
+			card.active.effect
 			this.usedActive = true;
 			return true;
 		}
@@ -285,7 +285,7 @@ export class Game {
 		// Trigger EOT effects for player who just finished his turn
 		this.turn.eot = this.turn.eot.filter(c => c.card.onBoard);
 		for (const e of this.turn.eot)
-			e.effect();
+			e.effectFunc(this, e.card, e.args);
 
 		// Switch player
 		this.turn = this.otherPlayer(this.turn);
@@ -296,7 +296,7 @@ export class Game {
 		// Trigger SOT effects for new player
 		this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
 		for (const e of this.turn.sot)
-			e.effect();
+			e.effectFunc(this, e.card, e.args);
 	}
 
 	getBoard(x: number, y: number) {

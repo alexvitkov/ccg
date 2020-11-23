@@ -1,4 +1,4 @@
-import { GameRules, Stage } from './game_common';
+import { GameRules } from './game_common';
 
 export type Message = {
 	message: string;
@@ -16,8 +16,8 @@ export type GameStartedMessage = {
 	message: 'gameStarted';
 	rules: GameRules;
 	//     cardID   card proto ID
-	hand: [number, number][];
-	opponentHandSize: number;
+	hand: number[];
+	opponentHand: number[];
 }
 
 export type DoneWithBlindStageMessage = {
@@ -29,5 +29,31 @@ export type BlindStageOverMessage = {
 	message: 'blindStageOver';
 	otherPlayerPlayed: [id: number, cardID: number, x: number, y: number][];
 	myTurn: boolean,
-	gameStage: Stage,
+	movePoints: number,
+}
+
+export type FullSyncPlayerState =  {
+	movePoints: number,
+	activesRemaining: number,
+	unitsMoved: number[],
+	hand: number[],
+	sot: [number,string][],
+	eot: [number,string][],
+}
+
+export type FullSync = {
+	message: 'fullSync',
+	rules: GameRules,
+	board: {
+		id: number,
+		x: number,
+		y: number,
+		mine: boolean,
+		proto: number,
+		strength: number,
+		active: string[],
+	}[],
+	myTurn: boolean,
+	me: FullSyncPlayerState,
+	opponent: FullSyncPlayerState,
 }

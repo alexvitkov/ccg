@@ -3,7 +3,7 @@ import { Card, Player, Game, GameRules, CardProto } from '../game_common';
 import { set, blindStageOver, turnChanged, makeCardDiv, fieldDivs, desync, gameOver } from './gameHtml';
 import { send } from './main';
 import * as ve from './viewevent';
-import { Effect } from '../effects';
+import { EffectInstance } from '../effects';
 
 export var game: ClientGame;
 export var rules: GameRules;
@@ -11,12 +11,12 @@ export var rules: GameRules;
 // this takes the effect and transforms it a bit
 // it adds some animations so the card goes up in the air a bit
 // while the effect is playing
-function highlight(game: Game, card: ClientCard, effect: Effect) {
-	const oldEffect = effect.effect;
-	effect.effect = () => {
-		game.push(() => ve.beginHightlight(card));
-		oldEffect();
-		game.push(() => ve.endHightlight(card));
+function highlight(effect: EffectInstance) {
+	const oldFn = effect.effectFunc;
+	effect.effectFunc = (game, card, args) => {
+		game.push(() => ve.beginHightlight(card as ClientCard));
+		oldFn(game, card, args);
+		game.push(() => ve.endHightlight(card as ClientCard));
 	}
 }
 
@@ -28,11 +28,11 @@ export class ClientCard extends Card {
 		super(id, owner, proto);
 		this.div = makeCardDiv(this);
 		if (this.sot)
-			highlight(game, this, this.sot);
+			highlight(this.sot);
 		if (this.eot)
-			highlight(game, this, this.eot);
+			highlight(this.eot);
 		if (this.active)
-			highlight(game, this, this.active);
+			highlight(this.active);
 	}
 
 	takeDamage(dmg: number) {

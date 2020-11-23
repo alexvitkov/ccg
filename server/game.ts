@@ -1,6 +1,6 @@
 import { Session } from './session';
 import { Card, CardProto, GameRules, Game, Player } from '../game_common';
-import { GameStartedMessage, DoneWithBlindStageMessage, BlindStageOverMessage } from '../messages';
+import { GameStartedMessage, DoneWithBlindStageMessage, BlindStageOverMessage, FullSync, FullSyncPlayerState } from '../messages';
 import { Message } from '../messages';
 
 export const ruleset: GameRules = {
@@ -52,21 +52,21 @@ export class ServerGame extends Game {
 		this.p1 = new ServerPlayer(this, session1, false)
 		this.p2 = new ServerPlayer(this, session2, true)
 
-		const hand = [0,0,0,0,1,1,1,2,2,2,2];
+		const hand = [0, 1, 2];
 		this.p1.hand = hand.map(id => this.instantiate(this.p1, this.rules.cardSet[id]));
 		this.p2.hand = hand.map(id => this.instantiate(this.p2, this.rules.cardSet[id]));
 
 		session2.send({
 			message: 'gameStarted',
 			rules: this.rules,
-			hand: this.p2.hand.map(c => [c.id, c.proto.cardID]),
+			hand: this.p2.hand.map(c => [c.id, c.proto.protoID]),
 			opponentHandSize: this.p1.hand.length
 		} as GameStartedMessage);
 
 		session1.send({
 			message: 'gameStarted',
 			rules: this.rules,
-			hand: this.p1.hand.map(c => [c.id, c.proto.cardID]),
+			hand: this.p1.hand.map(c => [c.id, c.proto.protoID]),
 			opponentHandSize: this.p2.hand.length
 		} as GameStartedMessage);
 	}
@@ -95,6 +95,36 @@ export class ServerGame extends Game {
 		return card;
 	}
 
+	fullSyncPlayerState(player: ServerPlayer): FullSyncPlayerState {
+		return {
+			movePoints: player.movePoints,
+			activesRemaining: player.usedActive ? 0 : 1,
+			unitsMoved: player.justMovedCards.map(c => c.id),
+			hand: player.hand.map(h => h.proto.protoID),
+			sot: null,
+			eot: null,
+		}
+	}
+
+	fullSync(player: ServerPlayer): FullSync {
+		return {
+			message: 'fullSync',
+			rules: this.rules,
+			board: Object.values(this._board).map(c => { return {
+				id: c.id,
+				x: player.clientToServerX(c.x),
+				y: player.clientToServerY(c.y),
+				mine: c.owner === player,
+				proto: c.proto.protoID,
+				strength: c.strength,
+				active: null, // TODO
+			}}),
+			myTurn: this.turn === player,
+			me: this.fullSyncPlayerState(player),
+			opponent: this.fullSyncPlayerState(this.otherPlayer(player) as ServerPlayer),
+		};
+	}
+
 	handleGameWsMessage(session: Session, message: Message): boolean {
 		const p = session === this.p1.session ? this.p1 : this.p2;
 
@@ -109,8 +139,8 @@ export class ServerGame extends Game {
 		}
 		if (r != 0) {
 			console.log(`Handler for ${message.message} failed @${r}`);
-			this.p1.send({ message: 'desync' });
-			this.p2.send({ message: 'desync' });
+			this.fullSync(this.p1);
+			this.fullSync(this.p2);
 			this.abortGame();
 			return false;
 		}
@@ -189,7 +219,7 @@ export class ServerGame extends Game {
 		otherPlayer.send({
 			message: 'opponentPlayedCard',
 			id: card.id,
-			cardID: card.proto.cardID,
+			cardID: card.proto.protoID,
 			x: otherPlayer.clientToServerX(x),
 			y: otherPlayer.clientToServerY(y),
 		});
@@ -265,7 +295,7 @@ export class ServerGame extends Game {
 			message: 'blindStageOver',
 			otherPlayerPlayed: this.p2.getUnits().map(unit => [
 				unit.id,
-				unit.proto.cardID,
+				unit.proto.protoID,
 				this.p1.clientToServerX(unit.x),
 				this.p1.clientToServerY(unit.y)
 			]),
@@ -276,7 +306,7 @@ export class ServerGame extends Game {
 			message: 'blindStageOver',
 			otherPlayerPlayed: this.p1.getUnits().map(unit => [
 				unit.id,
-				unit.proto.cardID,
+				unit.proto.protoID,
 				this.p2.clientToServerX(unit.x),
 				this.p2.clientToServerY(unit.y)
 			]),
