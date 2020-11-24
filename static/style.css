@@ -348,7 +348,7 @@ fieldset {
 	cursor: no-drop;
 }
 
-#game.canPlay > #myHand > .card,
+#game.canPlay > #myHand > .card:not(.noProvision),
 #game.canMove > .field  > .mycard,
 #game.canActive > .field > .mycard.hasActive
 {
@@ -360,7 +360,7 @@ fieldset {
 	cursor: pointer;
 }
 
-#game.canPlay > #myHand > .card:hover,
+#game.canPlay > #myHand > .card:not(.noProvision):hover,
 #game.canMove > .field  > .mycard:hover,
 #game.canActive > .field > .mycard.hasActive:hover
 {

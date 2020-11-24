@@ -112,6 +112,7 @@ export class Player {
 		this.game = game;
 		this.nextId = nextId;
 		this.isPlayer2 = isPlayer2;
+		this.provision = game.rules.provision;
 	}
 
 	S_takeFatigue() {

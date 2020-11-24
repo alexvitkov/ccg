@@ -16,8 +16,8 @@ export const ruleset: GameRules = {
 		new Proto(2, 'Gunner', '<h1>End of Turn</h1>\n Fire forward a bullet dealing 1 damage\n<h1>Active</h1>Fire forward a bullet dealing 2 damage.', 
 				  5, 5, 'GUN', 'gunnerActive', null, 'gunnerPassive'),
 	],
-	deckSize: 20,
-	provision: 50,
+	deckSize: 10,
+	provision: 15,
 	movePointsPerTurn: 2,
 	maxMovePoints: 5,
 }

@@ -25,6 +25,8 @@ const readyButton: HTMLButtonElement = document.getElementById("readyButton") as
 const readyButtonText: HTMLElement = document.getElementById("readyButtonText") as any;
 readyButton.onclick = ready;
 
+const protoDivs = {};
+
 const myHandDiv = document.getElementById("myHand");
 // const opponentHandDiv = document.getElementById("opponentHandDiv ");
 
@@ -64,9 +66,10 @@ export function makeProtoDiv(mine: boolean, proto: Proto): HTMLDivElement {
 
 	protoDiv.appendChild(text);
 	protoDiv.appendChild(strength);
+	protoDiv.setAttribute('data-protoId', proto.protoID.toString());
 
 	protoDiv.onmousedown = e => { 
-		if (game.canPlayCards()) {
+		if (game.canPlayCards() && proto.provision < game.p1.provision) {
 			const card = game.p1.instantiate(proto, 0);
 			startDrag(card as ClientCard, e); 
 		}
@@ -228,8 +231,20 @@ function startDrag(card: ClientCard, event: MouseEvent) {
 	onMouseMove(event);
 }
 
+export function provisionChanged() {
+	set('myProvision', game.p1.provision.toString());
+	for (const div of myHandDiv.children) {
+		if (rules.cardSet[div.getAttribute('data-protoId')].provision > game.p1.provision)
+			div.classList.add('noProvision');
+	}
+}
+
 function stopDrag(x: number, y: number) {
 	if (x < 0 || y < 0) {
+		if (Object.values(game._board).includes(draggedCard)) {
+			game.p1.provision += draggedCard.proto.provision;
+		}
+
 		game.destroy(draggedCard);
 		if (game.canPlayCards())
 			gameDiv.classList.add('canPlay');
@@ -237,18 +252,26 @@ function stopDrag(x: number, y: number) {
 
 	else if (game.inBlindStage) {
 		if (!game.putCard(x, y, draggedCard)) {
+			if (Object.values(game._board).includes(draggedCard))
+				game.p1.provision += draggedCard.proto.provision;
 			game.destroy(draggedCard);
 			if (game.canPlayCards())
 				gameDiv.classList.add('canPlay');
 		}
+		else {
+			// TODO we're not calling playCard, manually changing provision
+			game.p1.provision -= draggedCard.proto.provision;
+		}
 	}
 
 	else {
-		if (!game.p1.S_canPlayCardFromHand(x, y, draggedCard.proto)) {
+		if (!game.p1.S_canPlayCardFromHand(x, y, draggedCard.proto))
 			game.destroy(draggedCard);
-		}
-		game.p1.playCardFromHand(x, y, draggedCard);
+		else
+			game.p1.playCard(x, y, draggedCard);
 	}
+
+	provisionChanged();
 
 	if (!game.canPlayCards())
 		gameDiv.classList.remove('canPlay');

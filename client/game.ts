@@ -1,6 +1,6 @@
 import * as messages from '../messages';
 import { Card, Player, Game, GameRules, Proto, fail } from '../game_common';
-import { set, blindStageOver, turnChanged, makeCardDiv, fieldDivs, desync, gameOver } from './gameHtml';
+import { set, blindStageOver, turnChanged, makeCardDiv, fieldDivs, desync, gameOver, provisionChanged } from './gameHtml';
 import { send } from './main';
 import * as ve from './viewevent';
 import { EffectInstance } from '../effects';
@@ -81,11 +81,13 @@ export class ClientPlayer extends Player {
 		return card;
 	}
 
-	playCardFromHand(x: number, y: number, card: ClientCard) {
-		card.giveId();
+	playCard(x: number, y: number, card: ClientCard) {
+		if (!this.isPlayer2)
+			card.giveId();
+
 		super.playCard(x, y, card);
 
-		if (!game.inBlindStage) {
+		if (!this.isPlayer2 && !game.inBlindStage) {
 			send({
 				message: 'playCard',
 				id: card.id,
@@ -94,6 +96,9 @@ export class ClientPlayer extends Player {
 				y: y
 			});
 		}
+
+		provisionChanged();
+		set('opponentProvision', game.p2.provision.toString());
 		return true;
 	}
 
@@ -162,6 +167,10 @@ export class ClientGame extends Game {
 		(document.getElementById('header') as any).style.display = 'none';
 		this.p1.hand = message.hand.map(c => game.rules.cardSet[c]);
 		// this.p2.hand = message.hand.map(c => game.rules.cardSet[c]);
+
+		set('myProvision', this.p1.provision.toString());
+		set('opponentProvision', this.p2.provision.toString());
+		set('maxProvision', this.rules.provision.toString());
 	}
 
 
