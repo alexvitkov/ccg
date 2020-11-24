@@ -83,8 +83,8 @@ export class ClientPlayer extends Player {
 
 	playCardFromHand(x: number, y: number, card: ClientCard) {
 		card.giveId();
-		this.justPlayedCard = card;
-		this.game.putCard(x, y, card);
+		super.playCard(x, y, card);
+
 		if (!game.inBlindStage) {
 			send({
 				message: 'playCard',

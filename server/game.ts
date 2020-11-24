@@ -9,13 +9,15 @@ export const ruleset: GameRules = {
 	startingHandSize: 10,
 	blindStageUnits: 3,
 	cardSet: [
-		new Proto(0, 'Bomber', '<h1>Active</h1>\n Deal 5 damage in a 3x3 square around self', 4, 'BOMB', 'bomberActive'),
-		new Proto(1, 'Healer', '<h1>Start of Turn</h1>\n Heal all the nearest units for 1', 4, 'HEAL', null, 'healerPassive'),
-		new Proto(2, 'Gunner', '<h1>End of Turn</h1>\n Fire forward a bullet dealing 1 damage\n<h1>Active</h1>Fire forward a bullet dealing 2 damage.', 6, 'GUN', 'gunnerActive', null, 'gunnerPassive'),
+		new Proto(0, 'Bomber', '<h1>Active</h1>\n Deal 5 damage in a 3x3 square around self', 
+				  4, 6, 'BOMB', 'bomberActive'),
+		new Proto(1, 'Healer', '<h1>Start of Turn</h1>\n Heal all the nearest units for 1', 
+				  3, 7, 'HEAL', null, 'healerPassive'),
+		new Proto(2, 'Gunner', '<h1>End of Turn</h1>\n Fire forward a bullet dealing 1 damage\n<h1>Active</h1>Fire forward a bullet dealing 2 damage.', 
+				  5, 5, 'GUN', 'gunnerActive', null, 'gunnerPassive'),
 	],
-	minDeckSize: 20,
-	maxDeckSize: 30,
-
+	deckSize: 20,
+	provision: 50,
 	movePointsPerTurn: 2,
 	maxMovePoints: 5,
 }
@@ -240,7 +242,7 @@ export class ServerGame extends Game {
 			return false;
 
 		const card = p.instantiate(proto, id);
-		this.putCard(x, y, card);
+		p.playCard(x, y, card);
 
 		const otherPlayer = (this.otherPlayer(this.turn) as ServerPlayer);
 		otherPlayer.send({
@@ -258,7 +260,6 @@ export class ServerGame extends Game {
 			id: newId
 		});
 
-		p.justPlayedCard = card;
 		return true;
 	}
 

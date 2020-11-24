@@ -5,17 +5,19 @@ export class Proto {
 	cardName: string;
 	cardDescription: string;
 	baseStrength: number;
+	provision: number;
 
 	active: string;
 	sot: string;
 	eot: string;
 	cardLetter: string;
 
-	constructor(protoID: number, cardName: string, desc: string, baseStrength: number, cardLetter: string, active?: string, sot?: string, eot?: string) {
+	constructor(protoID: number, cardName: string, desc: string, baseStrength: number, provision: number, cardLetter: string, active?: string, sot?: string, eot?: string) {
 		this.protoID = protoID;
 		this.cardName = cardName;
 		this.cardDescription = desc;
 		this.baseStrength = baseStrength;
+		this.provision = provision;
 		this.cardLetter = cardLetter;
 		this.active = active;
 		this.sot = sot;
@@ -72,11 +74,10 @@ export class GameRules {
 	startingHandSize: number;
 	blindStageUnits: number;
 	cardSet: Proto[];
+	provision: number;
 	movePointsPerTurn: number;
 	maxMovePoints: number;
-
-	minDeckSize: number;
-	maxDeckSize: number;
+	deckSize: number;
 };
 
 export class Player {
@@ -84,6 +85,7 @@ export class Player {
 	hand: Proto[];
 	isPlayer2: boolean;
 	movePoints: number = 0;
+	provision: number;
 	fatigue: number = 1;
 	doneWithBlindStage: boolean = false;
  	nextId: number[];
@@ -98,6 +100,12 @@ export class Player {
 
 	debugPlayerName(): string {
 		return this.isPlayer2 ? "P2" : "P1";
+	}
+
+	playCard(x: number, y: number, card: Card) {
+		this.justPlayedCard = card;
+		this.game.putCard(x, y, card);
+		this.provision -= card.proto.provision;
 	}
 
 	constructor(game: Game, nextId: number[], isPlayer2: boolean) {
@@ -177,6 +185,9 @@ export class Player {
 		// can't play a card that's not in our hand
 		if (this.hand.indexOf(proto) === -1)
 			return fail(`Trying to play card that's not in hand`);
+
+		if (proto.provision > this.provision)
+			return fail(`not enough proivsion to play card`);
 
 		// if it's blind stage respect the unit count limit
 		if (this.game.inBlindStage) {
