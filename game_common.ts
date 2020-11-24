@@ -61,9 +61,9 @@ export class Card {
 		if (proto.active)
 			this.active = instantiateEffect(this, proto.active);
 		if (proto.sot)
-			this.active = instantiateEffect(this, proto.sot);
+			this.sot = instantiateEffect(this, proto.sot);
 		if (proto.eot)
-			this.active = instantiateEffect(this, proto.eot);
+			this.eot = instantiateEffect(this, proto.eot);
 	}
 }
 

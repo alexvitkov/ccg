@@ -160,7 +160,7 @@ function onMouseEnterField(x: number, y: number) {
 }
 
 function hoverProto(proto: Proto) {
-	document.getElementById('sidebar1').innerHTML = proto.cardDescription;
+	document.getElementById('sidebar1').innerHTML = `<h1>${proto.provision} provision</h1>` + proto.cardDescription;
 	document.getElementById('sidebar1').hidden = false;
 }
 

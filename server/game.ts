@@ -17,7 +17,7 @@ export const ruleset: GameRules = {
 				  5, 5, 'GUN', 'gunnerActive', null, 'gunnerPassive'),
 	],
 	deckSize: 10,
-	provision: 15,
+	provision: 50,
 	movePointsPerTurn: 2,
 	maxMovePoints: 5,
 }
