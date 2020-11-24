@@ -74,7 +74,7 @@ function bulletEffect(game: Game, card: Card, args: {damage: number}) {
 }
 
 export const effects: {[key: string]: EffectPreset } = {
-	'bomberActive': { func: bomberEffect, args: { damage: 3 }},
+	'bomberActive': { func: bomberEffect, args: { damage: 5 }},
 	'gunnerPassive': { func: bulletEffect, args: { damage: 1 }},
 	'gunnerActive': { func: bulletEffect, args: { damage: 2 }},
 	'healerPassive': { func: healerEffect, args: { healAmount: 1 }},

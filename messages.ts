@@ -15,14 +15,14 @@ export type ListLobbiesResponse = {
 export type GameStartedMessage = {
 	message: 'gameStarted';
 	rules: GameRules;
-	//     cardID   card proto ID
 	hand: number[];
+	nextIds: number[],
 	opponentHand: number[];
 }
 
 export type DoneWithBlindStageMessage = {
 	message: 'doneWithBlindStage';
-	played: [id: number, x: number, y: number][];
+	played: [id: number, protoID: number, x: number, y: number][];
 }
 
 export type BlindStageOverMessage = {
@@ -30,6 +30,14 @@ export type BlindStageOverMessage = {
 	otherPlayerPlayed: [id: number, cardID: number, x: number, y: number][];
 	myTurn: boolean,
 	movePoints: number,
+}
+
+export type PlayCardMessage = {
+	message: 'playCard',
+	id: number,
+	protoID: number,
+	x: number,
+	y: number
 }
 
 export type FullSyncPlayerState =  {

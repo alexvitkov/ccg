@@ -1,6 +1,6 @@
 import { effects, EffectInstance, EffectPreset, instantiateEffect } from './effects';
 
-export class CardProto {
+export class Proto {
 	protoID: number;
 	cardName: string;
 	cardDescription: string;
@@ -23,9 +23,20 @@ export class CardProto {
 	}
 }
 
+export const fatal_errors = [];
+export function good() {
+	return fatal_errors.length === 0;
+}
+
+export function fail(msg: string): false {
+	fatal_errors.push(Error(msg));	
+	console.log(fatal_errors[fatal_errors.length - 1]);
+	return false;
+}
+
 export class Card {
 	id: number;
-	proto: CardProto;
+	proto: Proto;
 	owner: Player;
 	strength: number;
 	x: number;
@@ -34,29 +45,17 @@ export class Card {
 	sot: EffectInstance;
 	eot: EffectInstance;
 
-	get onBoard() {
-		return this.x >= 0;
-	}
-
-	die() {
-		this.owner.game.liftCard(this);
-		if (this.owner.getUnits().length === 0)
-			this.owner.game.gameOver(this.owner.game.otherPlayer(this.owner));
-	}
-
 	takeDamage(damage: number) {
 		this.strength -= damage;
 		if (this.strength <= 0)
-			this.die();
+			this.owner.game.destroy(this);
 	}
 
-	constructor(id: number, owner: Player, proto: CardProto) {
+	constructor(id: number, owner: Player, proto: Proto) {
 		this.id = id;
 		this.proto = proto;
 		this.owner = owner;
 		this.strength = proto.baseStrength;
-		this.x = -1;
-		this.y = -1;
 		if (proto.active)
 			this.active = instantiateEffect(this, proto.active);
 		if (proto.sot)
@@ -72,7 +71,7 @@ export class GameRules {
 	ownHeight: number;
 	startingHandSize: number;
 	blindStageUnits: number;
-	cardSet: CardProto[];
+	cardSet: Proto[];
 	movePointsPerTurn: number;
 	maxMovePoints: number;
 
@@ -82,11 +81,12 @@ export class GameRules {
 
 export class Player {
 	game: Game;
-	hand: Card[];
+	hand: Proto[];
 	isPlayer2: boolean;
-	movePoints: number;
-	fatigue: number;
-	doneWithBlindStage: boolean;
+	movePoints: number = 0;
+	fatigue: number = 1;
+	doneWithBlindStage: boolean = false;
+ 	nextId: number[];
 
 	// These get rest every turn
 	justPlayedCard: Card = null;
@@ -96,11 +96,13 @@ export class Player {
 	sot: EffectInstance[] = [];
 	eot: EffectInstance[] = [];
 
-	constructor(game: Game, isPlayer2: boolean) {
+	debugPlayerName(): string {
+		return this.isPlayer2 ? "P2" : "P1";
+	}
+
+	constructor(game: Game, nextId: number[], isPlayer2: boolean) {
 		this.game = game;
-		this.fatigue = 1;
-		this.movePoints = 0;
-		this.doneWithBlindStage = false;
+		this.nextId = nextId;
 		this.isPlayer2 = isPlayer2;
 	}
 
@@ -129,19 +131,23 @@ export class Player {
 		this.fatigue++;
 	}
 
-	canActive(card: Card) {
-		return card.active 
-			&& card.owner === this 
-			&& card.onBoard 
-			&& !this.justMovedCards.includes(card)
-			&& !this.usedActive 
-			&& this.game.turn === this
-			&& !this.justMovedCards.includes(card);
+	canActive(card: Card): boolean {
+		if(!card.active) 
+			return fail(`Card ${card.id} has no active`);
+		if (card.owner !== this) 
+			return fail(`Card ${card.id} doesn't belong to ${card.owner.debugPlayerName()}`);
+		if(this.usedActive)
+			return fail(`${card.owner.debugPlayerName()} already used an active`);
+		if(this.game.turn !== this)
+			return fail(`${card.owner.debugPlayerName()} tried to use an active during other player's turn`);
+		if(this.justMovedCards.includes(card))
+			return fail(`${card.owner.debugPlayerName()} tried to use active of ${card.id} which was already moved`);
+		return true;
 	}
 
 	active(card: Card): boolean {
 		if (this.canActive(card)) {
-			card.active.effect
+			card.active.effectFunc(this.game, card, card.active.args);
 			this.usedActive = true;
 			return true;
 		}
@@ -152,34 +158,42 @@ export class Player {
 		return Object.values(this.game._board).filter(c => c.owner === this);
 	}
 
-	S_canPlayCardFromHand(x: number, y: number, card: Card): boolean {
-		// can only play cards on our side of the board
-		if (this.isPlayer2 && y < this.game.rules.boardHeight - this.game.rules.ownHeight)
-			return false;
-		if (!this.isPlayer2 && y >= this.game.rules.ownHeight)
-			return false;
-
-		// if it's blind stage respect the unit count limit
-		if (this.game.inBlindStage
-			&& this.getUnits().length >= this.game.rules.blindStageUnits)
-			return false;
-
+	S_canPlayCardFromHand(x: number, y: number, proto: Proto): boolean {
 		// validate coordinates
 		if (!this.game.coordinatesValid(x, y))
 			return false;
 
+		// can only play cards on our side of the board
+		if (this.isPlayer2 && y < this.game.rules.boardHeight - this.game.rules.ownHeight)
+			return fail(`trying to play card on opponent side of board`);
+		if (!this.isPlayer2 && y >= this.game.rules.ownHeight)
+			return fail(`trying to play card on opponent side of board`);
+
+
 		// cant play if there's something on the field
 		if (this.game.getBoard(x, y))
-			return false;
+			return fail(`Field ${[x, y]} taken`);
 
 		// can't play a card that's not in our hand
-		if (this.hand.indexOf(card) === -1)
-			return false;
+		if (this.hand.indexOf(proto) === -1)
+			return fail(`Trying to play card that's not in hand`);
 
-		// we can only play cards in blind stage
-		// or just one card per our turn
-		return this.game.inBlindStage ||
-			(!this.justPlayedCard && this.game.turn === this);
+		// if it's blind stage respect the unit count limit
+		if (this.game.inBlindStage) {
+			if (this.getUnits().length >= this.game.rules.blindStageUnits)
+				return fail(`trying to play cards over the blind stage limit`);
+			if (this.doneWithBlindStage)
+				return fail(`trying to play cards after ready with blind stage`);
+			return true;
+		}
+
+		if (this.game.turn !== this)
+			return fail(`trying to play card during other player's turn`);
+
+		if (this.justPlayedCard)
+			return fail(`already played a card this turn`);
+		
+		return true;
 	}
 
 	S_canMoveCard(x: number, y: number, card: Card): boolean {
@@ -189,30 +203,34 @@ export class Player {
 
 		// cant play if there's something on the field
 		if (this.game.getBoard(x, y))
-			return false;
+			return fail(`Field ${[x, y]} taken`);
 
 		// can't move a card that's not ours or isn't on board
-		if (card.owner !== this || !card.onBoard)
-			return false;
+		if (card.owner !== this)
+			return fail(`trying to play a card you dont own`);
 
 		// if we're in blind stage, we can freely move cards
 		// on our side of the board
 		if (this.game.inBlindStage) {
 			if (this.isPlayer2 && y < this.game.rules.boardHeight - this.game.rules.ownHeight)
-				return false;
+				return fail(`trying to play card on opponent side of board`);
 			if (!this.isPlayer2 && y >= this.game.rules.ownHeight)
-				return false;
+				return fail(`trying to play card on opponent side of board`);
 			return true;
 		}
 
-		// if we're not in blind stage, we can move if we have points
-		if (this.game.turn !== this || this.movePoints <= 0)
-			return false;
+		if (this.game.turn !== this)
+			return fail(`Trying to play a card during other player's turn`);
+		if(this.movePoints <= 0)
+			return fail(`out of move points`);
 
-		// we can move cards by one field horizontally or vertically
 		const dx = x - card.x;
 		const dy = y - card.y;
-		return Math.abs(dx) + Math.abs(dy) == 1;
+		const dist = Math.abs(dx) + Math.abs(dy);
+		if (dist !== 1)
+			return fail('can only move cards by one field horizontally or vertically');
+
+		return true;
 	}
 
 	S_moveCard(x: number, y: number, card: Card) {
@@ -222,14 +240,6 @@ export class Player {
 			if (!this.justMovedCards.includes(card))
 				this.justMovedCards.push(card);
 		}
-	}
-
-	S_playCardFromHand(x: number, y: number, card: Card) {
-		const posInHand = this.hand.indexOf(card);
-		this.hand.splice(posInHand, 1);
-		if (!this.game.inBlindStage)
-			this.justPlayedCard = card;
-		this.game.putCard(x, y, card);
 	}
 
 	get strength(): number {
@@ -243,22 +253,19 @@ export class Player {
 
 export class Game {
 	rules: GameRules;
-	inBlindStage: boolean;
+	inBlindStage: boolean = true;
+	isGameOver: boolean = false;
 	turn: Player;
 
-	isGameOver: boolean = false;
 
 	p1: Player;
 	p2: Player;
 
-	cards: {[id: number]: Card};
-	_board: {[xy: number]: Card};
+	cards: {[id: number]: Card} = {};
+	_board: {[xy: number]: Card} = {};
 
 	constructor(rules: GameRules) {
-		this.cards = {};
-		this._board = {};
 		this.rules = rules;
-		this.inBlindStage = true;
 	}
 
 	firstTurn() {
@@ -274,6 +281,18 @@ export class Game {
 		this.turn.usedActive = false;
 	}
 
+	getCard(id: number): Card {
+		const card = this.cards[id];
+		if (!card) {
+			var msg = `failed to get card ${id}. existing cards:`;
+			for (const id in this.cards)
+				msg += `\n[${id}] => { p2: ${this.cards[id].owner === this.p2} }`;
+			fail(msg);
+			return null;
+		}
+		return card;
+	}
+
 	gameOver(winner: Player) {
 		this.isGameOver = true;
 	}
@@ -283,7 +302,7 @@ export class Game {
 			this.turn.S_takeFatigue();
 
 		// Trigger EOT effects for player who just finished his turn
-		this.turn.eot = this.turn.eot.filter(c => c.card.onBoard);
+		this.turn.eot = this.turn.eot.filter(c => this.cards[c.card.id]);
 		for (const e of this.turn.eot)
 			e.effectFunc(this, e.card, e.args);
 
@@ -294,7 +313,7 @@ export class Game {
 		this.firstTurn();
 
 		// Trigger SOT effects for new player
-		this.turn.sot = this.turn.sot.filter(c => c.card.onBoard);
+		this.turn.sot = this.turn.sot.filter(c => this.cards[c.card.id]);
 		for (const e of this.turn.sot)
 			e.effectFunc(this, e.card, e.args);
 	}
@@ -311,22 +330,22 @@ export class Game {
 		return y * this.rules.boardWidth + x;
 	}
 
-	liftCard(card: Card) {
+	destroy(card: Card) {
 		const xy = this._xy(card.x, card.y);
 		delete this._board[xy];
-		card.x = -1;
-		card.x = -1;
+		if (card.id)
+			delete this.cards[card.id];
+		if (!this.inBlindStage && card.owner.getUnits().length === 0)
+			card.owner.game.gameOver(this.otherPlayer(card.owner));
 	}
 
 	putCard(x: number, y: number, card: Card): boolean {
 		if (this.getBoard(x, y))
-			return false;
-		if (!card.onBoard) {
-			if (card.sot)
-				card.owner.sot.push(card.sot);
-			if (card.eot)
-				card.owner.eot.push(card.eot);
-		}
+			return fail(`There's already a unit at ${[x, y]}`);
+		if (card.sot)
+			card.owner.sot.push(card.sot);
+		if (card.eot)
+			card.owner.eot.push(card.eot);
 		const xy = this._xy(card.x, card.y);
 		delete this._board[xy];
 		this._board[y * this.rules.boardWidth + x] = card;
@@ -335,11 +354,9 @@ export class Game {
 		return true;
 	}
 
-
 	coordinatesValid(x: number, y: number): boolean {
-		return Number.isInteger(x) && Number.isInteger(y)
-		&& x >= 0 && y >= 0
-		&& x < this.rules.boardWidth && y < this.rules.boardHeight;
+		if (Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < this.rules.boardWidth && y < this.rules.boardHeight) return true;
+		return fail(`Invalid coordinates (${x}, ${y})`);
 	}
 
 	otherPlayer(p: Player) {

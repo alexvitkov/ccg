@@ -1,5 +1,5 @@
 import * as messages from '../messages';
-import { Card, Player, Game, GameRules, CardProto } from '../game_common';
+import { Card, Player, Game, GameRules, Proto, fail } from '../game_common';
 import { set, blindStageOver, turnChanged, makeCardDiv, fieldDivs, desync, gameOver } from './gameHtml';
 import { send } from './main';
 import * as ve from './viewevent';
@@ -24,7 +24,7 @@ export class ClientCard extends Card {
 	div: HTMLDivElement;
 	owner: ClientPlayer;
 	
-	constructor(id: number, owner: Player, proto: CardProto) {
+	constructor(id: number, owner: Player, proto: Proto) {
 		super(id, owner, proto);
 		this.div = makeCardDiv(this);
 		if (this.sot)
@@ -35,27 +35,24 @@ export class ClientCard extends Card {
 			highlight(this.active);
 	}
 
+	giveId(): boolean {
+		if (this.id)
+			return fail('Trying to call giveId on a unit that already has one');
+		if (this.owner.nextId.length === 0)
+			return fail('Out of IDs');
+		this.id = this.owner.nextId.pop();
+		return true;
+	}
+
 	takeDamage(dmg: number) {
 		this.owner.game.push(ve.TakeDamage(this, this.strength, dmg));
 		super.takeDamage(dmg);
 	}
 
-	die() {
-		this.owner.game.push(() => { 
-			this.owner.recalculateStrength();
-			this.div.remove(); 
-		});
-		super.die();
-	}
 }
 
 export class ClientPlayer extends Player {
 	game: ClientGame;
-	hand: ClientCard[];
-
-	constructor(game: ClientGame, isPlayer2: boolean) {
-		super(game, isPlayer2);
-	}
 
 	active(card: Card): boolean {
 		if (super.active(card)) {
@@ -70,12 +67,29 @@ export class ClientPlayer extends Player {
 		return false;
 	}
 
-	S_playCardFromHand(x: number, y: number, card: ClientCard) {
-		super.S_playCardFromHand(x, y, card);
+	instantiate(proto: Proto, id?: number): ClientCard {
+		if (id && !this.isPlayer2) {
+			const index = this.nextId.indexOf(id);
+			if (index === -1) {
+				console.log('Invalid ID');
+				return null;
+			}
+			this.nextId.splice(index, 1);
+		}
+		const card = new ClientCard(id, this, proto);
+		this.game.cards[id] = card;
+		return card;
+	}
+
+	playCardFromHand(x: number, y: number, card: ClientCard) {
+		card.giveId();
+		this.justPlayedCard = card;
+		this.game.putCard(x, y, card);
 		if (!game.inBlindStage) {
 			send({
 				message: 'playCard',
 				id: card.id,
+				protoID: card.proto.protoID,
 				x: x,
 				y: y
 			});
@@ -87,7 +101,6 @@ export class ClientPlayer extends Player {
 		super.S_moveCard(x, y, card);
 		if (!this.game.inBlindStage && !this.isPlayer2) {
 			set('myMovePoints', this.movePoints.toString());
-			console.log('Sending moveCard');
 			send({
 				message: 'moveCard',
 				id: card.id,
@@ -98,41 +111,34 @@ export class ClientPlayer extends Player {
 		}
 	}
 
-	C_allowedMoveSquaresXY(card: Card): number[] {
+	allowedPlaySquaresXY(addX?: number, addY?: number): number[] {
 		const squares = [];
-		// We're playing a card, valid squares are our side of the board
-		if (!card.onBoard || game.inBlindStage) {
-			for (let y = 0; y < this.game.rules.ownHeight; y++)
+		for (let y = 0; y < this.game.rules.ownHeight; y++) {
 			for (let x = 0; x < this.game.rules.boardWidth; x++) {
-				if (!game.getBoard(x, y) || (game.inBlindStage && x === card.x && y === card.y))
+				if (!game.getBoard(x, y) || (game.inBlindStage && x === addX && y === addY))
 					squares.push(this.game._xy(x, y));
 			}
 		}
+		return squares;
+	}
+
+	allowedMoveSquaresXY(card: Card): number[] {
+		const squares = [];
 		// We're moving a card, valid squares are the neighboring ones
-		else {
-			squares.push(this.game._xy(card.x, card.y));
-			if (card.x > 0 && !this.game.getBoard(card.x - 1, card.y))
-				squares.push(this.game._xy(card.x - 1, card.y));
-			if (card.x < this.game.rules.boardWidth + 1 && !this.game.getBoard(card.x + 1, card.y))
-				squares.push(this.game._xy(card.x + 1, card.y));
-			if (card.y > 0 && !this.game.getBoard(card.x, card.y - 1))
-				squares.push(this.game._xy(card.x, card.y - 1));
-			if (card.y < this.game.rules.boardHeight - 1 && !this.game.getBoard(card.x, card.y + 1))
-				squares.push(this.game._xy(card.x, card.y + 1));
-		}
+		squares.push(this.game._xy(card.x, card.y));
+		if (card.x > 0 && !this.game.getBoard(card.x - 1, card.y))
+			squares.push(this.game._xy(card.x - 1, card.y));
+		if (card.x < this.game.rules.boardWidth + 1 && !this.game.getBoard(card.x + 1, card.y))
+			squares.push(this.game._xy(card.x + 1, card.y));
+		if (card.y > 0 && !this.game.getBoard(card.x, card.y - 1))
+			squares.push(this.game._xy(card.x, card.y - 1));
+		if (card.y < this.game.rules.boardHeight - 1 && !this.game.getBoard(card.x, card.y + 1))
+			squares.push(this.game._xy(card.x, card.y + 1));
 		return squares;
 	}
 
 	recalculateStrength() {
 		set(this === game.p1 ? 'myStrength' : 'enemyStrength', this.strength.toString());
-	}
-
-	// previousCard = null to insert at start of hand
-	returnCard(card: ClientCard, previousCard?: ClientCard) {
-		const pcIndex = this.hand.indexOf(previousCard);
-		this.game.liftCard(card);
-		this.hand.splice(pcIndex + 1, 0, card);
-		this.recalculateStrength();
 	}
 }
 
@@ -147,16 +153,25 @@ export class ClientGame extends Game {
 
 	constructor(message: messages.GameStartedMessage) {
 		super(message.rules);
-		this.p1 = new ClientPlayer(this, false);
-		this.p2 = new ClientPlayer(this, true);
+		this.p1 = new ClientPlayer(this, message.nextIds, false);
+		this.p2 = new ClientPlayer(this, null, true);
 
 		game = this;
 		rules = this.rules;
 
 		(document.getElementById('header') as any).style.display = 'none';
+		this.p1.hand = message.hand.map(c => game.rules.cardSet[c]);
+		// this.p2.hand = message.hand.map(c => game.rules.cardSet[c]);
+	}
 
-		this.p1.hand = message.hand.map(
-			c => this.instantiate(c[0], this.p1, rules.cardSet[c[1]]));
+
+
+	destroy(card: ClientCard) {
+		super.destroy(card);
+		this.push(() => { 
+			card.owner.recalculateStrength();
+			card.div.remove(); 
+		});
 	}
 
 	firstTurn() {
@@ -191,24 +206,22 @@ export class ClientGame extends Game {
 		}
 	}
 
-	instantiate(id: number, owner: Player, proto: CardProto) {
-		const card = new ClientCard(id, owner, proto);
-		this.cards[id] = card;
-		return card;
-	}
-
 	doneWithBlindStage() {
 		this.p1.doneWithBlindStage = true;
+		// Give the units IDs
+		for (const unit of this.p1.getUnits())
+			(unit as ClientCard).giveId();
+
 		send({
 			message: 'doneWithBlindStage',
-			played: Object.values(this._board).map(card => [card.id, card.x, card.y])
+			played: Object.values(this._board).map(card => [card.id, card.proto.protoID, card.x, card.y])
 		} as messages.DoneWithBlindStageMessage);
 	}
 
 	blindStageOver(msg: messages.BlindStageOverMessage) {
 		for (const [id, cardID, x, y] of msg.otherPlayerPlayed) {
-			const card = this.instantiate(id, this.p2, this.rules.cardSet[cardID]);
-			this.putCard(x, y, card);
+			const card = this.p2.instantiate(this.rules.cardSet[cardID], id);
+			this.putCard(x, y, card as ClientCard);
 		}
 		this.turn = msg.myTurn ? this.p1 : this.p2;
 		this.firstTurn();
@@ -249,35 +262,39 @@ export class ClientGame extends Game {
 				this.gameOver(msg.won ? this.p1 : this.p2);
 				break;
 			}
+			case 'newId': {
+				this.p1.nextId.push(msg.id);
+				break;
+			}
 			case 'blindStageOver': {
 				this.blindStageOver(msg as messages.BlindStageOverMessage);
 				break;
 			}
 			case 'opponentPlayedCard': {
+				// TODO validation here
 				const { id, cardID, x, y } = msg;
-				this.instantiate(id, this.p2, this.rules.cardSet[cardID]);
-				this.putCard(x, y, this.cards[id]);
-				this.p2.justPlayedCard = this.cards[id];
+				const card = this.p2.instantiate(this.rules.cardSet[cardID], id);
+				this.putCard(x, y, card);
+				this.p2.justPlayedCard = card;
 				break;
 			}
 			case 'opponentMovedCard': {
 				const { id, x, y } = msg;
-				this.p2.S_moveCard(x, y, this.cards[id]);
+				const card = this.getCard(id);
+				if (!card || !this.p2.S_canMoveCard(x, y, card))
+					return false;
+				this.p2.S_moveCard(x, y, card as ClientCard);
 				break;
 			}
 			case 'endTurn': {
-				this.nextTurn();
+				if (this.turn === this.p2) {
+					this.nextTurn();
+				}
+				else return fail(`Received endTurn from server during my turn!`);
 				break;
 			}
 			case 'active': {
-				this.p2.active(this.cards[msg.id]);
-				break;
-			}
-			case 'fatigue': {
-				const unit = this.cards[msg.id];
-				unit.takeDamage(unit.owner.fatigue);
-				unit.owner.fatigue++;
-				break;
+				return this.p2.active(this.cards[msg.id]);
 			}
 			default: {
 				return false;

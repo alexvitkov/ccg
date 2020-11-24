@@ -27,9 +27,13 @@ async function handleMessage(msg: messages.Message): Promise<boolean> {
 			onGameStarted();
 			return true;
 		}
-
 	}
-	return handleLobbyMessage(msg) || game?.handleMessage(msg);
+	if (handleLobbyMessage(msg))
+		return true;
+	if (game?.handleMessage(msg))
+		return true;
+	console.error(`Didn't handle message ${msg}`);
+	return false;
 }
 
 function wsConnect(callback: () => void) {
