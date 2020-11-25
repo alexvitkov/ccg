@@ -5,7 +5,7 @@
   "scripts": {
     "start":        "cd dist/tsc/server     && node index.js",
     "startesbuild": "cd dist/esbuild/server && node index.js",
-    "build": "make"
+    "build": "make tsc"
   },
   "keywords": [],
   "author": "",

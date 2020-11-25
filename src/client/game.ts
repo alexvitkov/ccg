@@ -304,7 +304,7 @@ export class ClientGame extends Game {
 				break;
 			}
 			case 'active': {
-				return this.p2.active(this.cards[msg.id]);
+				return this.p2.active(this.cards[msg.id], msg.activeArgs);
 			}
 			default: {
 				return false;

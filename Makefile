@@ -1,8 +1,5 @@
-tsc:     dist/tsc     dist/tsc/server/index.js     dist/tsc/client     dist/tsc/client/main.js     dist/tsc/views
+tsc:                  dist/tsc/server/index.js     dist/tsc/client     dist/tsc/client/main.js     dist/tsc/views
 esbuild:              dist/esbuild/server/index.js dist/esbuild/client dist/esbuild/client/main.js dist/esbuild/views 
-
-dist/tsc:
-	mkdir -p dist/tsc/client
 
 dist/tsc/server/index.js: src/*.ts src/server/*.ts
 	npx tsc -p tsconfig-server.json
@@ -14,7 +11,7 @@ dist/tsc/client: src/static/*
 	mkdir -p dist/tsc/client
 	cp src/static/* dist/tsc/client
 
-dist/tsc/client/main.js: src/*.ts src/server/*.ts
+dist/tsc/client/main.js: src/*.ts src/client/*.ts
 	npx tsc -p tsconfig-client.json
 
 dist/esbuild:

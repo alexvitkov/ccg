@@ -269,8 +269,9 @@ export class ServerGame extends Game {
 		if (typeof msg.id !== 'number')
 			return fail(`msg.id not a number`);
 
+		// TODO handle active args
 		const card = this.cards[msg.id];
-		if (card && p.active(card)) {
+		if (card && p.active(card, msg.activeArgs)) {
 			(this.otherPlayer(p) as ServerPlayer).send({
 				message: 'active',
 				id: card.id
