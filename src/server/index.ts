@@ -20,8 +20,10 @@ var users: Collection<any>;
 var sessionsColl: Collection<any>;
 
 const expressApp: express.Express = express();
+
+expressApp.set('views', '../views');
 expressApp.set('view engine', 'ejs');
-expressApp.use('/static', express.static('static'));
+expressApp.use('/client', express.static('../client'));
 expressApp.use(bodyParser.urlencoded({ extended: true }));
 expressApp.use(bodyParser.json({ limit: 1024 }));
 expressApp.use(cookieParser());

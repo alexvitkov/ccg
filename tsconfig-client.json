@@ -1,0 +1,10 @@
+{
+	"compilerOptions": {
+		"target": "ES6",
+		"module": "system",
+		"sourceMap": true,
+		"outFile": "dist/tsc/client/main.js"
+	},
+	"include": ["src/*", "src/client/**/*"],
+	"exclude": ["node_modules", "**/*.spec.ts"]
+}

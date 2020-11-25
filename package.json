@@ -2,10 +2,9 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
-    "faststart": "cd dist && node index.js",
-    "start": "cd dist && node --enable-source-maps index.js",
+    "start":        "cd dist/tsc/server     && node index.js",
+    "startesbuild": "cd dist/esbuild/server && node index.js",
     "build": "make"
   },
   "keywords": [],

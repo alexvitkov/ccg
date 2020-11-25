@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"target": "ES6",
+		"sourceMap": true,
+		"esModuleInterop": true,
+		"outDir": "dist/tsc"
+	},
+	"include": ["src/*", "src/server/**/*"],
+	"exclude": ["node_modules", "**/*.spec.ts"]
+}

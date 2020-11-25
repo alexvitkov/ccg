@@ -1,31 +1,49 @@
-fast: dist dist/index.js dist/static dist/static/main.js dist/views
+tsc:     dist/tsc     dist/tsc/server/index.js     dist/tsc/client     dist/tsc/client/main.js     dist/tsc/views
+esbuild:              dist/esbuild/server/index.js dist/esbuild/client dist/esbuild/client/main.js dist/esbuild/views 
 
-dist:
-	mkdir dist
+dist/tsc:
+	mkdir -p dist/tsc/client
 
-dist/index.js: dist server/* ./*.ts
+dist/tsc/server/index.js: src/*.ts src/server/*.ts
+	npx tsc -p tsconfig-server.json
+
+dist/tsc/views: src/views/*
+	cp -r src/views dist/tsc
+
+dist/tsc/client: src/static/*
+	mkdir -p dist/tsc/client
+	cp src/static/* dist/tsc/client
+
+dist/tsc/client/main.js: src/*.ts src/server/*.ts
+	npx tsc -p tsconfig-client.json
+
+dist/esbuild:
+	mkdir -p dist/esbuild/server
+
+dist/esbuild/server/index.js: dist/esbuild src/server/* src/*.ts
 	npx esbuild \
 		--outfile="$@" \
 		--sourcemap \
 		--bundle \
 		--platform=node \
 		--target=es2017 \
-		server/index.ts
+		src/server/index.ts
 
-dist/static/main.js: client/* ./*.ts
+dist/esbuild/client/main.js: dist/esbuild/client src/client/* src/*.ts
 	npx esbuild \
 		--outfile="$@" \
 		--sourcemap \
 		--bundle \
 		--platform=browser \
 		--target=es2017 \
-		client/main.ts
+		src/client/main.ts
 
-dist/static: static/*
-	cp -r static dist
+dist/esbuild/views: src/views/*
+	cp -r src/views dist/esbuild
 
-dist/views: views/*
-	cp -r views dist
+dist/esbuild/client: src/static/*
+	mkdir -p dist/esbuild/client
+	cp src/static/* dist/esbuild/client
 
 clean: 
 	rm -rf dist
