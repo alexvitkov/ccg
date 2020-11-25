@@ -8,20 +8,22 @@ export class Proto {
 	provision: number;
 
 	active: string;
+	deploy: string;
 	sot: string;
 	eot: string;
 	cardLetter: string;
 
-	constructor(protoID: number, cardName: string, desc: string, baseStrength: number, provision: number, cardLetter: string, active?: string, sot?: string, eot?: string) {
+	constructor(protoID: number, cardName: string, desc: string, baseStrength: number, provision: number, cardLetter: string, effects: { active?: string, sot?: string, eot?: string, deploy?: string} ) {
 		this.protoID = protoID;
 		this.cardName = cardName;
 		this.cardDescription = desc;
 		this.baseStrength = baseStrength;
 		this.provision = provision;
 		this.cardLetter = cardLetter;
-		this.active = active;
-		this.sot = sot;
-		this.eot = eot;
+		this.active = effects.active;
+		this.sot = effects.sot;
+		this.eot = effects.eot;
+		this.deploy = effects.eot;
 	}
 }
 
@@ -44,26 +46,29 @@ export class Card {
 	x: number;
 	y: number;
 	active: EffectInstance;
+	deploy: EffectInstance;
 	sot: EffectInstance;
 	eot: EffectInstance;
-
-	takeDamage(damage: number) {
-		this.strength -= damage;
-		if (this.strength <= 0)
-			this.owner.game.destroy(this);
-	}
 
 	constructor(id: number, owner: Player, proto: Proto) {
 		this.id = id;
 		this.proto = proto;
 		this.owner = owner;
 		this.strength = proto.baseStrength;
-		if (proto.active)
-			this.active = instantiateEffect(this, proto.active);
 		if (proto.sot)
 			this.sot = instantiateEffect(this, proto.sot);
 		if (proto.eot)
 			this.eot = instantiateEffect(this, proto.eot);
+		if (proto.active)
+			this.active = instantiateEffect(this, proto.active);
+		if (proto.deploy)
+			this.deploy = instantiateEffect(this, proto.deploy);
+	}
+
+	takeDamage(damage: number) {
+		this.strength -= damage;
+		if (this.strength <= 0)
+			this.owner.game.destroy(this);
 	}
 }
 
@@ -154,9 +159,9 @@ export class Player {
 		return true;
 	}
 
-	active(card: Card): boolean {
+	active(card: Card, activeArgs): boolean {
 		if (this.canActive(card)) {
-			card.active.effectFunc(this.game, card, card.active.args);
+			card.active.effectFunc(this.game, card, card.active.args, activeArgs);
 			this.usedActive = true;
 			return true;
 		}

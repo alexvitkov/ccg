@@ -1,6 +1,7 @@
 import { game, ClientCard, rules } from './game';
 import { Proto } from '../game_common';
 import { send } from './main';
+import { effects, ActiveTarget } from '../effects';
 
 const gameDiv = document.getElementById("game");
 
@@ -12,8 +13,8 @@ gameDiv.onmouseup = _e => {
 	if (draggedCard)
 		stopDrag(-1, -1);
 
-	if (activeCard)
-		stopActive();
+	if (aomCard)
+		stopActiveOrMove();
 };
 
 const blindStageMessageDiv = document.getElementById('blindStageMessage');
@@ -39,12 +40,18 @@ var draggedCard: ClientCard = null;
 var draggedDivOffsetX: number = 0;
 var draggedDivOffsetY: number = 0;
 
-// MOVING / ACTIVE
-var activeCard: ClientCard = null;
-var activeCardX: number;
-var activeCardY: number;
-var activeCardCanActive: boolean = false;
-var activeCardCanMove: boolean = false;
+// MOVING / ACTIVE SELECTION
+var aomCard: ClientCard = null;
+var aomCardX: number;
+var aomCardY: number;
+var aomCanActive: boolean = false;
+var aomCanMove: boolean = false;
+
+// ACTIVE TARGETING
+var activeTargets: ActiveTarget[];
+var activeTargetsIndex: number;
+var activeCard: ClientCard;
+var activeArgs: any[];
 
 export function makeProtoDiv(mine: boolean, proto: Proto): HTMLDivElement {
 	const protoDiv = document.createElement('div');
@@ -85,28 +92,56 @@ export function makeCardDiv(card: ClientCard): HTMLDivElement {
 		if (game.inBlindStage)
 			startDrag(card, e);
 		else
-			startActive(card);
+			startActiveOrMove(card);
 	}
 	div.setAttribute('data-id', card.id.toString());
 	return div;
 }
 
-function startActive(card: ClientCard) {
-	if (card.owner !== game.p1 || game.turn !== game.p1)
+function startActiveOrMove(card: ClientCard) {
+	if (card.owner !== game.p1 || game.turn !== game.p1 || activeCard)
 		return;
 
-	activeCardCanActive = !game.p1.usedActive;
-	activeCardCanMove = game.canMoveCards();
+	aomCanActive = !game.p1.usedActive;
+	aomCanMove = game.canMoveCards();
 
-	if (activeCardCanActive || activeCardCanMove) {
-		activeCard = card;
-		activeCardX = card.x;
-		activeCardY = card.y;
+	if (aomCanActive || aomCanMove) {
+		aomCard = card;
+		aomCardX = card.x;
+		aomCardY = card.y;
 
-		if (activeCardCanMove) {
+		if (aomCanMove) {
 			const allowedSquares = game.p1.allowedMoveSquaresXY(card);
 			for (const sq of allowedSquares)
 				fieldDivs[sq].classList.add('actionable');
+		}
+	}
+}
+
+function startActive(card: ClientCard) {
+	aomCard = null;
+	activeCard = card;
+	activeTargets = effects[card.active.effect].activeTypes;
+	activeTargetsIndex = -1;
+	activeArgs = [];
+	
+	nextActiveTarget();
+}
+
+function nextActiveTarget() {
+	activeTargetsIndex++;
+	console.log(activeTargetsIndex);
+	console.log(activeTargets);
+	if (activeTargetsIndex >= activeTargets.length) {
+		game.p1.active(activeCard, activeArgs);
+		activeCard = null;
+		return;
+	}
+
+	switch (activeTargets[activeTargetsIndex]) {
+		case 'anyField': {
+			for (const field of fieldDivs)
+				field.classList.add('actionable');
 		}
 	}
 }
@@ -116,16 +151,17 @@ export function desync(msg?: string) {
 	message(msg, -1);
 }
 
-function stopActive() {
-	if (activeCardX === activeCard.x && activeCardY === activeCard.y) {
-		if (activeCardCanActive) {
-			game.p1.active(activeCard);
+function stopActiveOrMove() {
+	var dostartActive = false;
+	if (aomCardX === aomCard.x && aomCardY === aomCard.y) {
+		if (aomCanActive) {
+			dostartActive = true;
 			gameDiv.classList.remove('canActive');
 		}
 	}
-	else if (activeCardCanMove) {
-		if (game.p1.S_canMoveCard(activeCardX, activeCardY, activeCard)) {
-			game.p1.S_moveCard(activeCardX, activeCardY, activeCard);
+	else if (aomCanMove) {
+		if (game.p1.S_canMoveCard(aomCardX, aomCardY, aomCard)) {
+			game.p1.S_moveCard(aomCardX, aomCardY, aomCard);
 			if (game.p1.movePoints === 0)
 				gameDiv.classList.remove('canMove');
 		}
@@ -133,28 +169,40 @@ function stopActive() {
 			desync('From stopActive()');
 		}
 	}
-	activeCard = null;
 	for (const td of fieldDivs)
 		td.classList.remove('actionable');
+	if (dostartActive)
+		startActive(aomCard);
+	else
+		aomCard = null;
+}
+
+function onFieldClick(x: number, y: number) {
+	if (activeCard && activeTargets[activeTargetsIndex] === 'anyField') {
+		activeArgs.push({ x: x, y: y });
+		for (const field of fieldDivs)
+			field.classList.add('actionable');
+		nextActiveTarget();
+	}
 }
 
 function onMouseEnterField(x: number, y: number) {
-	if (activeCard && activeCardCanMove) {
-		if (y == activeCard.y)
-			x = activeCard.x + Math.sign(x - activeCard.x);
-		if (x == activeCard.x)
-			y = activeCard.y + Math.sign(y - activeCard.y);
+	if (aomCard && aomCanMove) {
+		if (y == aomCard.y)
+			x = aomCard.x + Math.sign(x - aomCard.x);
+		if (x == aomCard.x)
+			y = aomCard.y + Math.sign(y - aomCard.y);
 
-		if (game.p1.S_canMoveCard(x, y, activeCard) || (x == activeCard.x && y == activeCard.y)) {
-			fieldDivs[game._xy(x,y)].appendChild(activeCard.div);
-			activeCardX = x;
-			activeCardY = y;
+		if (game.p1.S_canMoveCard(x, y, aomCard) || (x == aomCard.x && y == aomCard.y)) {
+			fieldDivs[game._xy(x,y)].appendChild(aomCard.div);
+			aomCardX = x;
+			aomCardY = y;
 		}
 		else {
-			activeCardX = activeCard.x;
-			activeCardY = activeCard.y;
-			const fieldDiv = fieldDivs[game._xy(activeCard.x, activeCard.y)];
-			fieldDiv.appendChild(activeCard.div);
+			aomCardX = aomCard.x;
+			aomCardY = aomCard.y;
+			const fieldDiv = fieldDivs[game._xy(aomCard.x, aomCard.y)];
+			fieldDiv.appendChild(aomCard.div);
 		}
 	}
 }
@@ -181,24 +229,25 @@ export function onGameStarted() {
 
 	for (let y = rules.boardHeight - 1; y >= 0; y--) {
 		for (let x = 0; x < rules.boardWidth; x++) {
-			const td = document.createElement('div');
-			td.setAttribute('data-x', x.toString());
-			td.setAttribute('data-y', y.toString());
-			fieldDivs[y * rules.boardWidth + x] = td;
-			last.parentNode.insertBefore(td, last.nextSibling);
-			last = td;
+			const fieldDiv = document.createElement('div');
+			fieldDiv.setAttribute('data-x', x.toString());
+			fieldDiv.setAttribute('data-y', y.toString());
+			fieldDivs[y * rules.boardWidth + x] = fieldDiv;
+			last.parentNode.insertBefore(fieldDiv, last.nextSibling);
+			last = fieldDiv;
 
-			td.style.gridColumnStart = (x + 2).toString();
-			td.style.gridRowStart = (7 - y).toString();
-			td.classList.add('field');
-			td.onmouseenter = () => onMouseEnterField(x, y);
+			fieldDiv.style.gridColumnStart = (x + 2).toString();
+			fieldDiv.style.gridRowStart = (7 - y).toString();
+			fieldDiv.classList.add('field');
+			fieldDiv.onmouseenter = () => onMouseEnterField(x, y);
+			fieldDiv.onclick = () => onFieldClick(x, y);
 
 			if (y < rules.ownHeight)
-				td.classList.add('myfield');
+				fieldDiv.classList.add('myfield');
 			else if (y >= rules.boardHeight - rules.ownHeight)
-				td.classList.add('opponentfield');
+				fieldDiv.classList.add('opponentfield');
 
-			td.onmouseup = () => { if (draggedCard) stopDrag(x, y); };
+			fieldDiv.onmouseup = () => { if (draggedCard) stopDrag(x, y); };
 		}
 	}
 	// Populate the hand
@@ -302,7 +351,7 @@ function ready() {
 		gameDiv.classList.remove('canMove');
 		gameDiv.classList.remove('canPlay');
 	}
-	else {
+	else if (!activeCard && !aomCard && !draggedCard) {
 		send({ message: 'skip' });
 		game.nextTurn();
 	}

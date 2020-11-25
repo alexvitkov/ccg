@@ -1,4 +1,4 @@
-all: dist dist/index.js dist/static dist/static/main.js dist/views
+fast: dist dist/index.js dist/static dist/static/main.js dist/views
 
 dist:
 	mkdir dist

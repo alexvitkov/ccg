@@ -54,11 +54,12 @@ export class ClientCard extends Card {
 export class ClientPlayer extends Player {
 	game: ClientGame;
 
-	active(card: Card): boolean {
-		if (super.active(card)) {
+	active(card: Card, activeArgs): boolean {
+		if (super.active(card, activeArgs)) {
 			if (!this.isPlayer2) {
 				send({
 					message: 'active',
+					args: activeArgs,
 					id: card.id
 				});
 			}

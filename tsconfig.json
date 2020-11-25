@@ -3,7 +3,8 @@
 		"module": "commonjs",
 		"target": "ES6",
 		"sourceMap": true,
-		"esModuleInterop": true
+		"esModuleInterop": true,
+		"outDir": "dist/tsc"
 	},
 	"include": ["**/*"],
 	"exclude": ["node_modules", "**/*.spec.ts"]

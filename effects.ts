@@ -4,14 +4,17 @@ export type EffectInstance = {
 	card: Card;
 	effect: string;
 	effectFunc: EffectFunciton;
-	args: object;
+	args: {[key: string]: any};
 }
 
-export type EffectFunciton = (game: Game, card: Card, args: object) => void;
+export type EffectFunciton = (game: Game, card: Card, args: object, activeArgs?: any[]) => void;
+
+export type ActiveTarget = 'anyField';
 
 export type EffectPreset = {
 	func: EffectFunciton
-	args: object
+	args: object,
+	activeTypes?: ActiveTarget[];
 }
 
 function bomberEffect(game: Game, card: Card, args: {damage: number}) {
@@ -28,6 +31,18 @@ function bomberEffect(game: Game, card: Card, args: {damage: number}) {
 		}
 	}
 	game.endGroup();
+}
+
+function archerbotPassive(game: Game, _card: Card, args: {damage: number, x: number; y: number}) {
+	const unitToDamage = game.getBoard(args.x, args.y);
+	unitToDamage?.takeDamage(args.damage);
+}
+
+function archerbotTarget(_game: Game, card: Card, _args: any, activeArgs: any) {
+	for (const ef of card.owner.eot.filter(e => e.card === card && e.effect === 'archerbotPassive')) {
+		ef.args.x = activeArgs[0].x;
+		ef.args.y = activeArgs[0].y;
+	}
 }
 
 function healerEffect(game: Game, card: Card, args: {healAmount: number}) {
@@ -78,6 +93,8 @@ export const effects: {[key: string]: EffectPreset } = {
 	'gunnerPassive': { func: bulletEffect, args: { damage: 1 }},
 	'gunnerActive': { func: bulletEffect, args: { damage: 2 }},
 	'healerPassive': { func: healerEffect, args: { healAmount: 1 }},
+	'archerbotPassive': { func: archerbotPassive, args: { damage: 1 }},
+	'archerbotTarget': { func: archerbotTarget, args: {}, activeTypes: ['anyField']},
 };
 
 export function instantiateEffect(card: Card, name: string): EffectInstance {
@@ -85,6 +102,6 @@ export function instantiateEffect(card: Card, name: string): EffectInstance {
 		card: card,
 		effect: name,
 		effectFunc: effects[name].func,
-		args: effects[name].args
+		args: {... effects[name].args}
 	}
 }
